@@ -1,0 +1,73 @@
+# 依赖目录
+node_modules/
+.pnp
+.pnp.js
+
+# 构建输出
+dist/
+build/
+release/
+*.js.map
+
+# 开发环境文件
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# 日志文件
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# 运行时数据
+.electron-store/
+*.db
+*.db-journal
+
+# 编辑器目录和文件
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# 测试覆盖率
+coverage/
+
+# TypeScript缓存
+*.tsbuildinfo
+
+# 临时文件
+.tmp/
+.temp/
+
+# 打包后的应用程序
+out/
+release-builds/
+*.exe
+*.dmg
+*.zip
+*.tar.gz
+*.AppImage
+*.deb
+*.rpm
+
+# SQLite数据库文件
+chrome-environments.db
+
+# 操作系统生成的文件
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
