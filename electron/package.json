@@ -1,0 +1,5 @@
+{
+    "name": "multichrome-electron",
+    "type": "module",
+    "private": true
+}

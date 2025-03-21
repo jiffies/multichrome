@@ -12,11 +12,6 @@ const Header: React.FC<HeaderProps> = ({ onCreateEnvironment }) => {
     return (
         <header className="flex items-center justify-between px-6 py-4 bg-white shadow-sm">
             <div className="flex items-center">
-                <img
-                    src="/logo.png"
-                    alt="MultiChrome Logo"
-                    className="w-8 h-8 mr-3"
-                />
                 <Title level={4} style={{ margin: 0 }}>
                     MultiChrome - Chrome多环境管理
                 </Title>

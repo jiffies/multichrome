@@ -23,6 +23,13 @@ export interface ElectronAPI {
         close: (id: string) => Promise<boolean>;
         delete: (id: string) => Promise<boolean>;
         update: (id: string, data: Partial<ChromeEnvironment>) => Promise<ChromeEnvironment>;
+        getEmptyGroups: () => Promise<string[]>;
+        deleteEmptyGroup: (groupName: string) => Promise<boolean>;
+    };
+    settings: {
+        getSettings: () => Promise<{dataPath: string}>;
+        saveSettings: (settings: {dataPath: string}) => Promise<boolean>;
+        selectFolder: () => Promise<{canceled: boolean, filePaths: string[]}>;
     };
 }
 

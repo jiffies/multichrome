@@ -25,7 +25,15 @@ const CreateEnvironmentModal: React.FC<CreateEnvironmentModalProps> = ({
         try {
             setLoading(true);
             const values = await form.validateFields();
-            onOk(values.name, values.groupName, values.notes || '');
+            
+            // 处理groupName，mode="tags"会返回数组，取第一个值作为分组名
+            const groupName = Array.isArray(values.groupName) 
+                ? values.groupName[0] 
+                : values.groupName || '默认分组';  // 如果没有选择，使用默认分组
+            
+            console.log('表单提交数据:', values.name, groupName, values.notes || '');
+            
+            onOk(values.name, groupName, values.notes || '');
             form.resetFields();
         } catch (error) {
             console.error('表单验证失败:', error);
@@ -62,7 +70,7 @@ const CreateEnvironmentModal: React.FC<CreateEnvironmentModalProps> = ({
             <Form
                 form={form}
                 layout="vertical"
-                initialValues={{ groupName: groups.length > 0 ? groups[0] : '' }}
+                initialValues={{ groupName: groups.length > 0 ? groups[0] : '默认分组' }}
             >
                 <Form.Item
                     name="name"
@@ -82,12 +90,19 @@ const CreateEnvironmentModal: React.FC<CreateEnvironmentModalProps> = ({
                         allowClear
                         showSearch
                         optionFilterProp="children"
+                        mode="tags"  // 允许创建新的选项
                     >
-                        {groups.map(group => (
-                            <Option key={group} value={group}>
-                                {group}
+                        {groups.length > 0 ? (
+                            groups.map(group => (
+                                <Option key={group} value={group}>
+                                    {group}
+                                </Option>
+                            ))
+                        ) : (
+                            <Option key="默认分组" value="默认分组">
+                                默认分组
                             </Option>
-                        ))}
+                        )}
                     </Select>
                 </Form.Item>
 

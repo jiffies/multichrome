@@ -1,81 +1,90 @@
 {
-  "name": "multichrome",
-  "version": "1.0.0",
-  "description": "Chrome多环境管理工具",
-  "main": "dist/electron/main.js",
-  "scripts": {
-    "dev": "concurrently \"npm run dev:vite\" \"npm run dev:electron\"",
-    "dev:vite": "vite",
-    "dev:electron": "tsc -p electron/tsconfig.json && electron .",
-    "build": "npm run build:vite && npm run build:electron",
-    "build:vite": "vite build",
-    "build:electron": "tsc -p electron/tsconfig.json",
-    "package:win": "electron-builder --win",
-    "lint": "eslint . --ext .ts,.tsx",
-    "lint:fix": "eslint . --ext .ts,.tsx --fix"
-  },
-  "keywords": [
-    "chrome",
-    "profile",
-    "manager",
-    "electron",
-    "react"
-  ],
-  "author": "",
-  "license": "MIT",
-  "dependencies": {
-    "antd": "^5.12.5",
-    "better-sqlite3": "^9.2.2",
-    "electron-log": "^5.0.1",
-    "electron-store": "^8.1.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-icons": "^4.12.0",
-    "uuid": "^9.0.1"
-  },
-  "devDependencies": {
-    "@electron/rebuild": "^3.7.1",
-    "@types/better-sqlite3": "^7.6.8",
-    "@types/node": "^20.10.5",
-    "@types/react": "^18.2.45",
-    "@types/react-dom": "^18.2.18",
-    "@types/uuid": "^9.0.7",
-    "@typescript-eslint/eslint-plugin": "^6.15.0",
-    "@typescript-eslint/parser": "^6.15.0",
-    "@vitejs/plugin-react": "^4.2.1",
-    "autoprefixer": "^10.4.16",
-    "concurrently": "^8.2.2",
-    "electron": "^28.0.0",
-    "electron-builder": "^24.9.1",
-    "electron-rebuild": "^3.2.9",
-    "eslint": "^8.56.0",
-    "eslint-plugin-react": "^7.33.2",
-    "eslint-plugin-react-hooks": "^4.6.0",
-    "postcss": "^8.4.32",
-    "tailwindcss": "^3.4.0",
-    "typescript": "^5.3.3",
-    "vite": "^5.0.10"
-  },
-  "build": {
-    "appId": "com.multichrome.app",
-    "productName": "MultiChrome",
-    "directories": {
-      "output": "release"
+    "name": "multichrome",
+    "version": "1.0.0",
+    "type": "module",
+    "description": "Chrome多环境管理工具",
+    "main": "dist/electron/main.js",
+    "scripts": {
+        "dev": "concurrently \"npm run dev:vite\" \"npm run dev:electron\"",
+        "dev:vite": "vite",
+        "dev:electron": "powershell \"$env:NODE_ENV='development'; tsc -p electron/tsconfig.json; copy electron\\preload.cjs dist\\electron\\preload.cjs; electron .\"",
+        "build": "npm run build:vite && npm run build:electron",
+        "build:vite": "vite build",
+        "build:electron": "powershell \"tsc -p electron/tsconfig.json; copy electron\\preload.cjs dist\\electron\\preload.cjs\"",
+        "package:win": "electron-builder --win",
+        "lint": "eslint . --ext .ts,.tsx",
+        "lint:fix": "eslint . --ext .ts,.tsx --fix"
     },
-    "files": [
-      "dist/**/*",
-      "package.json"
+    "keywords": [
+        "chrome",
+        "profile",
+        "manager",
+        "electron",
+        "react"
     ],
-    "win": {
-      "target": [
-        "nsis"
-      ],
-      "icon": "assets/icon.ico"
+    "author": "",
+    "license": "MIT",
+    "dependencies": {
+        "@tailwindcss/vite": "^4.0.15",
+        "antd": "^5.12.5",
+        "better-sqlite3": "^9.2.2",
+        "dayjs": "^1.11.13",
+        "electron-log": "^5.0.1",
+        "electron-store": "^8.1.0",
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0",
+        "react-icons": "^4.12.0",
+        "tailwindcss": "^4.0.15",
+        "uuid": "^9.0.1"
     },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true
+    "devDependencies": {
+        "@electron/rebuild": "^3.7.1",
+        "@types/better-sqlite3": "^7.6.8",
+        "@types/node": "^20.10.5",
+        "@types/react": "^18.2.45",
+        "@types/react-dom": "^18.2.18",
+        "@types/uuid": "^9.0.7",
+        "@typescript-eslint/eslint-plugin": "^6.15.0",
+        "@typescript-eslint/parser": "^6.15.0",
+        "@vitejs/plugin-react": "^4.2.1",
+        "autoprefixer": "^10.4.16",
+        "concurrently": "^8.2.2",
+        "electron": "^28.0.0",
+        "electron-builder": "^24.9.1",
+        "electron-rebuild": "^3.2.9",
+        "eslint": "^8.56.0",
+        "eslint-plugin-react": "^7.33.2",
+        "eslint-plugin-react-hooks": "^4.6.0",
+        "postcss": "^8.4.32",
+        "typescript": "^5.3.3",
+        "vite": "^5.0.10"
+    },
+    "build": {
+        "appId": "com.multichrome.app",
+        "productName": "MultiChrome",
+        "directories": {
+            "output": "release"
+        },
+        "files": [
+            "dist/**/*",
+            "package.json"
+        ],
+        "win": {
+            "target": [
+                "nsis"
+            ],
+            "icon": "assets/icon.ico",
+            "forceCodeSigning": false
+        },
+        "nsis": {
+            "oneClick": false,
+            "allowToChangeInstallationDirectory": true,
+            "createDesktopShortcut": true
+        },
+        "asar": true,
+        "asarUnpack": [
+            "**/*.node"
+        ],
+        "npmRebuild": false
     }
-  }
 }

@@ -7,6 +7,7 @@ import Store from 'electron-store';
 import log from 'electron-log';
 import { app } from 'electron';
 import os from 'os';
+import { SettingsManager } from './settingsManager.js';
 
 // Chrome环境接口
 export interface ChromeEnvironment {
@@ -47,11 +48,21 @@ export class ChromeManager {
     private runningProcesses: Map<string, ChildProcess>;
     private defaultChromeDataDir: string;
     private environmentsDataDir: string;
+    private settingsManager: SettingsManager;
+    private appDataPath: string;
 
     constructor() {
+        // 初始化设置管理器
+        this.settingsManager = new SettingsManager();
+        
+        // 获取应用数据路径
+        this.appDataPath = this.settingsManager.getSettings().dataPath || app.getPath('userData');
+        log.info(`应用数据路径: ${this.appDataPath}`);
+        
         // 初始化存储目录
-        this.environmentsDataDir = path.join(app.getPath('userData'), 'environments');
-        console.log(this.environmentsDataDir);
+        this.environmentsDataDir = path.join(this.appDataPath, 'environments');
+        console.log(`环境数据目录: ${this.environmentsDataDir}`);
+        
         // 确保目录存在
         if (!fs.existsSync(this.environmentsDataDir)) {
             fs.mkdirSync(this.environmentsDataDir, { recursive: true });
@@ -61,12 +72,13 @@ export class ChromeManager {
         this.defaultChromeDataDir = this.getDefaultChromeDataDir();
 
         // 初始化数据库
-        const dbPath = path.join(app.getPath('userData'), 'chrome-environments.db');
+        const dbPath = path.join(this.appDataPath, 'chrome-environments.db');
         this.db = new Database(dbPath);
 
         // 初始化存储
         this.store = new Store({
             name: 'config',
+            cwd: this.appDataPath,
             schema: {
                 chromeExecutablePath: {
                     type: 'string',
@@ -256,9 +268,9 @@ export class ChromeManager {
 
             // 准备启动参数
             const args = [
-                `--user-data-dir=${env.dataDir}`,
-                '--no-first-run',
-                '--no-default-browser-check'
+                `--user-data-dir=${env.dataDir}`,// 指定用户数据目录，每个环境独立
+                '--no-first-run',              // 禁用首次运行向导
+                '--no-default-browser-check'   // 禁用默认浏览器检查
             ];
 
             // 添加代理设置（如果有）
@@ -270,6 +282,9 @@ export class ChromeManager {
             if (env.userAgent) {
                 args.push(`--user-agent=${env.userAgent}`);
             }
+
+            // 打印完整的启动命令和参数
+            console.log(`执行Chrome启动命令: ${chromePath} ${args.join(' ')}`);
 
             // 启动Chrome进程
             const chromeProcess = spawn(chromePath, args, {
@@ -417,5 +432,44 @@ export class ChromeManager {
             log.error('更新环境失败:', error);
             throw error;
         }
+    }
+
+    // 删除空分组
+    public async deleteEmptyGroup(groupName: string): Promise<boolean> {
+        // 首先检查该分组是否为空
+        const stmt = this.db.prepare('SELECT COUNT(*) as count FROM environments WHERE groupName = ?');
+        const result = stmt.get(groupName) as { count: number };
+        
+        if (result.count > 0) {
+            // 分组不为空，不能删除
+            return false;
+        }
+        
+        // 分组为空，可以删除
+        // 实际上，由于分组只是环境的一个属性，而不是单独的表，
+        // 所以删除空分组只需要确保没有环境使用这个分组名即可
+        return true;
+    }
+
+    // 获取所有空分组
+    public async getEmptyGroups(): Promise<string[]> {
+        // 获取所有使用中的分组
+        const usedGroupsStmt = this.db.prepare('SELECT DISTINCT groupName FROM environments');
+        const usedGroups = usedGroupsStmt.all() as { groupName: string }[];
+        
+        // 获取所有不同的分组名称
+        const allGroupsStmt = this.db.prepare('SELECT DISTINCT groupName FROM environments');
+        const allGroups = allGroupsStmt.all() as { groupName: string }[];
+        
+        // 找出哪些分组是空的（没有环境使用）
+        const allGroupNames = allGroups.map(g => g.groupName);
+        const nonEmptyGroups = new Set(usedGroups.map(g => g.groupName));
+        
+        // 返回空分组列表
+        return allGroupNames.filter(group => {
+            const count = this.db.prepare('SELECT COUNT(*) as count FROM environments WHERE groupName = ?')
+                .get(group) as { count: number };
+            return count.count === 0;
+        });
     }
 } 

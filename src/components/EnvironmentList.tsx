@@ -5,7 +5,6 @@ import {
     CloseCircleOutlined,
     DeleteOutlined,
     ReloadOutlined,
-    InfoCircleOutlined
 } from '@ant-design/icons';
 import { ChromeEnvironment } from '../types';
 import dayjs from 'dayjs';
@@ -128,7 +127,7 @@ const EnvironmentList: React.FC<EnvironmentListProps> = ({
             title: '操作',
             key: 'action',
             width: 150,
-            render: (_, record: ChromeEnvironment) => (
+            render: (_: any, record: ChromeEnvironment) => (
                 <Space size="small">
                     {record.isRunning ? (
                         <Button

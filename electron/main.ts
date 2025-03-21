@@ -1,14 +1,22 @@
-import { app, BrowserWindow, ipcMain, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, shell, dialog } from 'electron';
 import path from 'path';
 import log from 'electron-log';
-import { ChromeManager } from './chromeManager';
+import { ChromeManager } from './chromeManager.js';
+import { SettingsManager } from './settingsManager.js';
+import { fileURLToPath } from 'url';
+
+// ESM兼容性：获取当前文件的目录名
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // 设置日志
 log.transports.file.level = 'info';
 log.info('应用启动');
 
-// 开发模式判断
+// 输出环境变量信息
+log.info('Node环境:', process.env.NODE_ENV);
 const isDev = process.env.NODE_ENV === 'development';
+
+log.info('是否开发模式:', isDev);
 
 // 全局窗口引用
 let mainWindow: BrowserWindow | null = null;
@@ -16,15 +24,22 @@ let mainWindow: BrowserWindow | null = null;
 // 初始化Chrome管理器
 const chromeManager = new ChromeManager();
 
+// 初始化设置管理器
+const settingsManager = new SettingsManager();
+
 function createWindow() {
     // 创建主窗口
     mainWindow = new BrowserWindow({
         width: 1200,
         height: 800,
         webPreferences: {
-            preload: path.join(__dirname, 'preload.js'),
+            preload: isDev 
+                ? path.join(__dirname, 'preload.cjs') // 开发模式下
+                : path.join(__dirname, 'preload.cjs'),  // 生产模式下
             contextIsolation: true,
             nodeIntegration: false,
+            sandbox: false, // 关闭沙盒模式以支持ESM
+            additionalArguments: ['--enable-features=ElectronPreloadModules'], // 启用ESM模块支持
         },
         icon: path.join(__dirname, '../../assets/icon.png'),
     });
@@ -32,7 +47,7 @@ function createWindow() {
     // 加载前端页面
     if (isDev) {
         // 开发模式下，加载开发服务器URL
-        mainWindow.loadURL('http://localhost:3000');
+        mainWindow.loadURL('http://localhost:5173');
         // 打开开发工具
         mainWindow.webContents.openDevTools();
     } else {
@@ -99,6 +114,7 @@ function setupIpcHandlers() {
     // 启动Chrome环境
     ipcMain.handle('launch-chrome-environment', async (_, id: string) => {
         try {
+            console.log(`收到启动Chrome环境请求，环境ID: ${id}`);
             return await chromeManager.launchEnvironment(id);
         } catch (error) {
             log.error('启动Chrome环境失败:', error);
@@ -132,6 +148,65 @@ function setupIpcHandlers() {
             return await chromeManager.updateEnvironment(id, data);
         } catch (error) {
             log.error('更新Chrome环境失败:', error);
+            throw error;
+        }
+    });
+    
+    // 获取空分组
+    ipcMain.handle('get-empty-groups', async () => {
+        try {
+            return await chromeManager.getEmptyGroups();
+        } catch (error) {
+            log.error('获取空分组失败:', error);
+            throw error;
+        }
+    });
+    
+    // 删除空分组
+    ipcMain.handle('delete-empty-group', async (_, groupName: string) => {
+        try {
+            return await chromeManager.deleteEmptyGroup(groupName);
+        } catch (error) {
+            log.error('删除空分组失败:', error);
+            throw error;
+        }
+    });
+
+    // 获取应用设置
+    ipcMain.handle('get-settings', async () => {
+        try {
+            return settingsManager.getSettings();
+        } catch (error) {
+            log.error('获取应用设置失败:', error);
+            throw error;
+        }
+    });
+    
+    // 保存应用设置
+    ipcMain.handle('save-settings', async (_, settings: {dataPath: string}) => {
+        try {
+            return await settingsManager.saveSettings(settings);
+        } catch (error) {
+            log.error('保存应用设置失败:', error);
+            throw error;
+        }
+    });
+    
+    // 选择文件夹
+    ipcMain.handle('select-folder', async () => {
+        try {
+            if (!mainWindow) {
+                throw new Error('主窗口未初始化');
+            }
+            
+            const result = await dialog.showOpenDialog(mainWindow, {
+                properties: ['openDirectory', 'createDirectory'],
+                title: '选择数据存储位置'
+            });
+            
+            return result;
+        } catch (error) {
+            log.error('选择文件夹失败:', error);
             throw error;
         }
     });
