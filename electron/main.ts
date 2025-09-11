@@ -1,7 +1,7 @@
 import { app, BrowserWindow, ipcMain, shell, dialog } from 'electron';
 import path from 'path';
 import log from 'electron-log';
-import { ChromeManager } from './chromeManager.js';
+import { ChromeManager, ChromeEnvironment } from './chromeManager.js';
 import { SettingsManager } from './settingsManager.js';
 import { fileURLToPath } from 'url';
 
@@ -10,16 +10,33 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // 设置日志
 log.transports.file.level = 'info';
-log.info('应用启动');
+log.info('Application starting...');
 
 // 输出环境变量信息
-log.info('Node环境:', process.env.NODE_ENV);
+log.info('Node environment:', process.env.NODE_ENV || 'production');
 const isDev = process.env.NODE_ENV === 'development';
 
-log.info('是否开发模式:', isDev);
+log.info('Development mode:', isDev);
 
 // 全局窗口引用
 let mainWindow: BrowserWindow | null = null;
+
+// 输入验证函数
+function validateString(value: unknown, name: string): string {
+    if (typeof value !== 'string' || value.trim().length === 0) {
+        throw new Error(`${name} 必须是非空字符串`);
+    }
+    return value.trim();
+}
+
+function validateId(value: unknown): string {
+    const id = validateString(value, 'ID');
+    // 简单的UUID格式验证
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+        throw new Error('无效的ID格式');
+    }
+    return id;
+}
 
 // 初始化Chrome管理器
 const chromeManager = new ChromeManager();
@@ -33,15 +50,29 @@ function createWindow() {
         width: 1200,
         height: 800,
         webPreferences: {
-            preload: isDev 
-                ? path.join(__dirname, 'preload.cjs') // 开发模式下
-                : path.join(__dirname, 'preload.cjs'),  // 生产模式下
+            preload: path.join(__dirname, 'preload.cjs'),
             contextIsolation: true,
             nodeIntegration: false,
-            sandbox: false, // 关闭沙盒模式以支持ESM
-            additionalArguments: ['--enable-features=ElectronPreloadModules'], // 启用ESM模块支持
+            sandbox: true, // 启用沙盒模式提升安全性
+            webSecurity: true,
+            allowRunningInsecureContent: false,
+            experimentalFeatures: false,
         },
         icon: path.join(__dirname, '../../assets/icon.png'),
+    });
+
+    // 设置安全策略
+    mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+        callback({
+            responseHeaders: {
+                ...details.responseHeaders,
+                'Content-Security-Policy': [
+                    isDev 
+                        ? "default-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:5173 ws://localhost:5173; script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:5173; style-src 'self' 'unsafe-inline' http://localhost:5173;"
+                        : "default-src 'self' 'unsafe-inline'; script-src 'self'; style-src 'self' 'unsafe-inline';"
+                ]
+            }
+        });
     });
 
     // 加载前端页面
@@ -102,9 +133,13 @@ function setupIpcHandlers() {
     });
 
     // 创建新的Chrome环境
-    ipcMain.handle('create-chrome-environment', async (_, name: string, groupName: string, notes: string = '') => {
+    ipcMain.handle('create-chrome-environment', async (_, name: unknown, groupName: unknown, notes: unknown = '') => {
         try {
-            return await chromeManager.createEnvironment(name, groupName, notes);
+            const validName = validateString(name, '环境名称');
+            const validGroupName = validateString(groupName, '分组名称');
+            const validNotes = typeof notes === 'string' ? notes : '';
+            
+            return await chromeManager.createEnvironment(validName, validGroupName, validNotes);
         } catch (error) {
             log.error('创建Chrome环境失败:', error);
             throw error;
@@ -112,10 +147,11 @@ function setupIpcHandlers() {
     });
 
     // 启动Chrome环境
-    ipcMain.handle('launch-chrome-environment', async (_, id: string) => {
+    ipcMain.handle('launch-chrome-environment', async (_, id: unknown) => {
         try {
-            console.log(`收到启动Chrome环境请求，环境ID: ${id}`);
-            return await chromeManager.launchEnvironment(id);
+            const validId = validateId(id);
+            log.info(`收到启动Chrome环境请求，环境ID: ${validId}`);
+            return await chromeManager.launchEnvironment(validId);
         } catch (error) {
             log.error('启动Chrome环境失败:', error);
             throw error;
@@ -123,29 +159,89 @@ function setupIpcHandlers() {
     });
 
     // 关闭Chrome环境
-    ipcMain.handle('close-chrome-environment', async (_, id: string) => {
+    ipcMain.handle('close-chrome-environment', async (_, id: unknown) => {
         try {
-            return await chromeManager.closeEnvironment(id);
+            const validId = validateId(id);
+            return await chromeManager.closeEnvironment(validId);
         } catch (error) {
             log.error('关闭Chrome环境失败:', error);
             throw error;
         }
     });
 
-    // 删除Chrome环境
-    ipcMain.handle('delete-chrome-environment', async (_, id: string) => {
+    // 软删除Chrome环境（移到回收站）
+    ipcMain.handle('delete-chrome-environment', async (_, id: unknown) => {
         try {
-            return await chromeManager.deleteEnvironment(id);
+            const validId = validateId(id);
+            return await chromeManager.deleteEnvironment(validId);
         } catch (error) {
             log.error('删除Chrome环境失败:', error);
             throw error;
         }
     });
+    
+    // 获取回收站中的环境
+    ipcMain.handle('get-deleted-environments', async () => {
+        try {
+            return await chromeManager.getDeletedEnvironments();
+        } catch (error) {
+            log.error('获取回收站环境失败:', error);
+            throw error;
+        }
+    });
+    
+    // 从回收站恢复环境
+    ipcMain.handle('restore-chrome-environment', async (_, id: unknown) => {
+        try {
+            const validId = validateId(id);
+            return await chromeManager.restoreEnvironment(validId);
+        } catch (error) {
+            log.error('恢复Chrome环境失败:', error);
+            throw error;
+        }
+    });
+    
+    // 永久删除环境
+    ipcMain.handle('permanently-delete-environment', async (_, id: unknown) => {
+        try {
+            const validId = validateId(id);
+            return await chromeManager.permanentlyDeleteEnvironment(validId);
+        } catch (error) {
+            log.error('永久删除环境失败:', error);
+            throw error;
+        }
+    });
+    
+    // 清空回收站
+    ipcMain.handle('cleanup-trash', async () => {
+        try {
+            return await chromeManager.cleanupTrash();
+        } catch (error) {
+            log.error('清空回收站失败:', error);
+            throw error;
+        }
+    });
 
     // 更新Chrome环境信息
-    ipcMain.handle('update-chrome-environment', async (_, id: string, data: any) => {
+    ipcMain.handle('update-chrome-environment', async (_, id: unknown, data: unknown) => {
         try {
-            return await chromeManager.updateEnvironment(id, data);
+            const validId = validateId(id);
+            
+            // 验证更新数据
+            if (!data || typeof data !== 'object') {
+                throw new Error('更新数据格式无效');
+            }
+            
+            const updateData = data as Record<string, unknown>;
+            const validData: Partial<ChromeEnvironment> = {};
+            
+            if ('name' in updateData) validData.name = validateString(updateData.name, '环境名称');
+            if ('groupName' in updateData) validData.groupName = validateString(updateData.groupName, '分组名称');
+            if ('notes' in updateData) validData.notes = typeof updateData.notes === 'string' ? updateData.notes : '';
+            if ('proxy' in updateData) validData.proxy = typeof updateData.proxy === 'string' ? updateData.proxy : undefined;
+            if ('userAgent' in updateData) validData.userAgent = typeof updateData.userAgent === 'string' ? updateData.userAgent : undefined;
+            
+            return await chromeManager.updateEnvironment(validId, validData);
         } catch (error) {
             log.error('更新Chrome环境失败:', error);
             throw error;
@@ -163,9 +259,10 @@ function setupIpcHandlers() {
     });
     
     // 删除空分组
-    ipcMain.handle('delete-empty-group', async (_, groupName: string) => {
+    ipcMain.handle('delete-empty-group', async (_, groupName: unknown) => {
         try {
-            return await chromeManager.deleteEmptyGroup(groupName);
+            const validGroupName = validateString(groupName, '分组名称');
+            return await chromeManager.deleteEmptyGroup(validGroupName);
         } catch (error) {
             log.error('删除空分组失败:', error);
             throw error;
@@ -183,9 +280,19 @@ function setupIpcHandlers() {
     });
     
     // 保存应用设置
-    ipcMain.handle('save-settings', async (_, settings: {dataPath: string}) => {
+    ipcMain.handle('save-settings', async (_, settings: unknown) => {
         try {
-            return await settingsManager.saveSettings(settings);
+            if (!settings || typeof settings !== 'object') {
+                throw new Error('设置数据格式无效');
+            }
+            
+            const settingsData = settings as Record<string, unknown>;
+            if (!('dataPath' in settingsData) || typeof settingsData.dataPath !== 'string') {
+                throw new Error('dataPath 必须是字符串');
+            }
+            
+            const validSettings = { dataPath: settingsData.dataPath };
+            return await settingsManager.saveSettings(validSettings);
         } catch (error) {
             log.error('保存应用设置失败:', error);
             throw error;

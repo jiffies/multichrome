@@ -23,7 +23,7 @@ try {
             // 关闭环境
             close: (id) => ipcRenderer.invoke("close-chrome-environment", id),
 
-            // 删除环境
+            // 软删除环境（移到回收站）
             delete: (id) => ipcRenderer.invoke("delete-chrome-environment", id),
 
             // 更新环境
@@ -36,6 +36,21 @@ try {
             // 删除空分组
             deleteEmptyGroup: (groupName) =>
                 ipcRenderer.invoke("delete-empty-group", groupName),
+        },
+        
+        // 回收站管理API
+        trash: {
+            // 获取回收站中的环境
+            getDeletedEnvironments: () => ipcRenderer.invoke("get-deleted-environments"),
+            
+            // 从回收站恢复环境
+            restore: (id) => ipcRenderer.invoke("restore-chrome-environment", id),
+            
+            // 永久删除环境
+            permanentlyDelete: (id) => ipcRenderer.invoke("permanently-delete-environment", id),
+            
+            // 清空回收站
+            cleanup: () => ipcRenderer.invoke("cleanup-trash"),
         },
         // 设置API
         settings: {

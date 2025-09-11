@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Form, Input, Button, message } from 'antd';
-import { FolderOutlined } from '@ant-design/icons';
+import { Dialog, Box, FormControl, TextInput, Button, Text, Flash } from '@primer/react';
+import { FileDirectoryIcon } from '@primer/octicons-react';
 
 interface SettingsModalProps {
     open: boolean;
@@ -17,95 +17,137 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     onSave,
     currentSettings
 }) => {
-    const [form] = Form.useForm();
     const [loading, setLoading] = useState(false);
+    const [dataPath, setDataPath] = useState('');
+    const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
 
     useEffect(() => {
         if (open) {
-            form.setFieldsValue({
-                dataPath: currentSettings.dataPath
-            });
+            setDataPath(currentSettings.dataPath || '');
+            setError('');
+            setSuccess('');
         }
-    }, [open, form, currentSettings]);
+    }, [open, currentSettings]);
 
     const handleSelectFolder = async () => {
         try {
             if (!window.electronAPI || !window.electronAPI.settings) {
-                message.error('无法访问系统功能');
+                setError('无法访问系统功能');
                 return;
             }
             
             const result = await window.electronAPI.settings.selectFolder();
             if (result && result.canceled === false && result.filePaths.length > 0) {
-                form.setFieldsValue({ dataPath: result.filePaths[0] });
+                setDataPath(result.filePaths[0]);
+                setError('');
             }
         } catch (error) {
             console.error('选择文件夹失败:', error);
-            message.error('选择文件夹失败');
+            setError('选择文件夹失败');
         }
     };
 
     const handleSave = async () => {
+        if (!dataPath.trim()) {
+            setError('请输入数据存储位置');
+            return;
+        }
+
         try {
-            const values = await form.validateFields();
             setLoading(true);
+            setError('');
             
-            const success = await onSave(values);
+            const success = await onSave({ dataPath });
             if (success) {
-                message.success('设置已保存，将在下次启动时生效');
-                onCancel();
+                setSuccess('设置已保存，将在下次启动时生效');
+                setTimeout(() => {
+                    onCancel();
+                }, 1500);
             }
         } catch (error) {
             console.error('保存设置失败:', error);
+            setError('保存设置失败');
         } finally {
             setLoading(false);
         }
     };
 
+    const handleCancel = () => {
+        setDataPath('');
+        setError('');
+        setSuccess('');
+        onCancel();
+    };
+
+    if (!open) return null;
+
     return (
-        <Modal
-            title="程序设置"
-            open={open}
-            onCancel={onCancel}
-            footer={[
-                <Button key="back" onClick={onCancel}>
-                    取消
-                </Button>,
-                <Button 
-                    key="submit" 
-                    type="primary" 
-                    loading={loading} 
-                    onClick={handleSave}
-                >
-                    保存
-                </Button>
-            ]}
+        <Dialog
+            isOpen={open}
+            onDismiss={handleCancel}
+            aria-labelledby="settings-title"
         >
-            <Form
-                form={form}
-                layout="vertical"
-                initialValues={currentSettings}
-            >
-                <Form.Item
-                    name="dataPath"
-                    label="数据存储位置"
-                    rules={[{ required: true, message: '请输入数据存储位置' }]}
-                    help="修改后需要重启应用才能生效，数据将被自动迁移到新位置"
-                >
-                    <Input 
-                        placeholder="选择文件夹路径" 
-                        addonAfter={
-                            <Button 
-                                icon={<FolderOutlined />} 
-                                onClick={handleSelectFolder}
-                                type="text"
-                                style={{ border: 'none', padding: 0 }}
+            <Dialog.Header id="settings-title">
+                程序设置
+            </Dialog.Header>
+            
+            <Box p={3}>
+                {error && (
+                    <Flash variant="danger" sx={{ mb: 3 }}>
+                        {error}
+                    </Flash>
+                )}
+                
+                {success && (
+                    <Flash variant="success" sx={{ mb: 3 }}>
+                        {success}
+                    </Flash>
+                )}
+
+                <FormControl required>
+                    <FormControl.Label>数据存储位置</FormControl.Label>
+                    <Box display="flex" alignItems="center" sx={{ gap: 2 }}>
+                        <Box flex={1}>
+                            <TextInput
+                                placeholder="选择文件夹路径"
+                                value={dataPath}
+                                onChange={(e) => setDataPath(e.target.value)}
                             />
-                        }
-                    />
-                </Form.Item>
-            </Form>
-        </Modal>
+                        </Box>
+                        <Button
+                            leadingIcon={FileDirectoryIcon}
+                            onClick={handleSelectFolder}
+                            variant="outline"
+                        >
+                            浏览
+                        </Button>
+                    </Box>
+                    <FormControl.Caption>
+                        修改后需要重启应用才能生效，数据将被自动迁移到新位置
+                    </FormControl.Caption>
+                </FormControl>
+            </Box>
+
+            <Dialog.Footer>
+                <Dialog.Buttons>
+                    <Button 
+                        variant="primary" 
+                        onClick={handleSave}
+                        loading={loading}
+                        disabled={loading}
+                    >
+                        保存
+                    </Button>
+                    <Button 
+                        onClick={handleCancel}
+                        disabled={loading}
+                    >
+                        取消
+                    </Button>
+                </Dialog.Buttons>
+            </Dialog.Footer>
+        </Dialog>
     );
 };
 

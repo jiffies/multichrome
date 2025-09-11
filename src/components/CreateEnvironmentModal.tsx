@@ -1,8 +1,5 @@
 import React, { useState } from 'react';
-import { Modal, Form, Input, Select, Button } from 'antd';
-
-const { Option } = Select;
-const { TextArea } = Input;
+import { Dialog, Box, FormControl, TextInput, Textarea, Button, Select } from '@primer/react';
 
 interface CreateEnvironmentModalProps {
     open: boolean;
@@ -17,26 +14,51 @@ const CreateEnvironmentModal: React.FC<CreateEnvironmentModalProps> = ({
     onCancel,
     groups
 }) => {
-    const [form] = Form.useForm();
     const [loading, setLoading] = useState(false);
+    const [formData, setFormData] = useState({
+        name: '',
+        groupName: groups.length > 0 ? groups[0] : '默认分组',
+        notes: ''
+    });
+    const [errors, setErrors] = useState<{[key: string]: string}>({});
+
+    // 验证表单
+    const validateForm = () => {
+        const newErrors: {[key: string]: string} = {};
+        
+        if (!formData.name.trim()) {
+            newErrors.name = '请输入环境名称';
+        }
+        
+        if (!formData.groupName.trim()) {
+            newErrors.groupName = '请选择或输入分组';
+        }
+        
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
 
     // 提交表单
     const handleSubmit = async () => {
+        if (!validateForm()) {
+            return;
+        }
+
         try {
             setLoading(true);
-            const values = await form.validateFields();
+            console.log('表单提交数据:', formData.name, formData.groupName, formData.notes);
             
-            // 处理groupName，mode="tags"会返回数组，取第一个值作为分组名
-            const groupName = Array.isArray(values.groupName) 
-                ? values.groupName[0] 
-                : values.groupName || '默认分组';  // 如果没有选择，使用默认分组
+            await onOk(formData.name, formData.groupName, formData.notes);
             
-            console.log('表单提交数据:', values.name, groupName, values.notes || '');
-            
-            onOk(values.name, groupName, values.notes || '');
-            form.resetFields();
+            // 重置表单
+            setFormData({
+                name: '',
+                groupName: groups.length > 0 ? groups[0] : '默认分组',
+                notes: ''
+            });
+            setErrors({});
         } catch (error) {
-            console.error('表单验证失败:', error);
+            console.error('提交失败:', error);
         } finally {
             setLoading(false);
         }
@@ -44,79 +66,100 @@ const CreateEnvironmentModal: React.FC<CreateEnvironmentModalProps> = ({
 
     // 取消
     const handleCancel = () => {
-        form.resetFields();
+        setFormData({
+            name: '',
+            groupName: groups.length > 0 ? groups[0] : '默认分组',
+            notes: ''
+        });
+        setErrors({});
         onCancel();
     };
 
+    if (!open) return null;
+
     return (
-        <Modal
-            title="创建新的Chrome环境"
-            open={open}
-            onCancel={handleCancel}
-            footer={[
-                <Button key="cancel" onClick={handleCancel}>
-                    取消
-                </Button>,
-                <Button
-                    key="submit"
-                    type="primary"
-                    loading={loading}
-                    onClick={handleSubmit}
-                >
-                    创建
-                </Button>
-            ]}
+        <Dialog
+            isOpen={open}
+            onDismiss={handleCancel}
+            aria-labelledby="create-environment-title"
         >
-            <Form
-                form={form}
-                layout="vertical"
-                initialValues={{ groupName: groups.length > 0 ? groups[0] : '默认分组' }}
-            >
-                <Form.Item
-                    name="name"
-                    label="环境名称"
-                    rules={[{ required: true, message: '请输入环境名称' }]}
-                >
-                    <Input placeholder="例如: 工作、个人、测试等" />
-                </Form.Item>
-
-                <Form.Item
-                    name="groupName"
-                    label="分组"
-                    rules={[{ required: true, message: '请选择或输入分组' }]}
-                >
-                    <Select
-                        placeholder="选择或创建新分组"
-                        allowClear
-                        showSearch
-                        optionFilterProp="children"
-                        mode="tags"  // 允许创建新的选项
-                    >
-                        {groups.length > 0 ? (
-                            groups.map(group => (
-                                <Option key={group} value={group}>
-                                    {group}
-                                </Option>
-                            ))
-                        ) : (
-                            <Option key="默认分组" value="默认分组">
-                                默认分组
-                            </Option>
+            <Dialog.Header id="create-environment-title">
+                创建新的Chrome环境
+            </Dialog.Header>
+            
+            <Box p={3}>
+                <Box as="form" display="flex" flexDirection="column" sx={{ gap: 3 }}>
+                    <FormControl required>
+                        <FormControl.Label>环境名称</FormControl.Label>
+                        <TextInput
+                            placeholder="例如: 工作、个人、测试等"
+                            value={formData.name}
+                            onChange={(e) => setFormData({...formData, name: e.target.value})}
+                        />
+                        {errors.name && (
+                            <FormControl.Validation variant="error">
+                                {errors.name}
+                            </FormControl.Validation>
                         )}
-                    </Select>
-                </Form.Item>
+                    </FormControl>
 
-                <Form.Item
-                    name="notes"
-                    label="备注"
-                >
-                    <TextArea
-                        rows={3}
-                        placeholder="可选的备注信息"
-                    />
-                </Form.Item>
-            </Form>
-        </Modal>
+                    <FormControl required>
+                        <FormControl.Label>分组</FormControl.Label>
+                        <Select
+                            placeholder="选择或创建新分组"
+                            value={formData.groupName}
+                            onChange={(e) => setFormData({...formData, groupName: e.target.value})}
+                        >
+                            {groups.length > 0 ? (
+                                groups.map(group => (
+                                    <Select.Option key={group} value={group}>
+                                        {group}
+                                    </Select.Option>
+                                ))
+                            ) : (
+                                <Select.Option value="默认分组">
+                                    默认分组
+                                </Select.Option>
+                            )}
+                        </Select>
+                        {errors.groupName && (
+                            <FormControl.Validation variant="error">
+                                {errors.groupName}
+                            </FormControl.Validation>
+                        )}
+                    </FormControl>
+
+                    <FormControl>
+                        <FormControl.Label>备注</FormControl.Label>
+                        <Textarea
+                            placeholder="可选的备注信息"
+                            rows={3}
+                            value={formData.notes}
+                            onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                        />
+                    </FormControl>
+                </Box>
+            </Box>
+
+            <Dialog.Footer>
+                <Dialog.Buttons>
+                    <Button 
+                        variant="primary" 
+                        onClick={handleSubmit}
+                        loading={loading}
+                        disabled={loading}
+                    >
+                        创建
+                    </Button>
+                    <Button 
+                        onClick={handleCancel}
+                        disabled={loading}
+                    >
+                        取消
+                    </Button>
+                </Dialog.Buttons>
+            </Dialog.Footer>
+        </Dialog>
     );
 };
 

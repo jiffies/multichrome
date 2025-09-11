@@ -21,6 +21,7 @@ export interface ChromeEnvironment {
     userAgent?: string;
     createdAt: string;
     lastUsed: string;
+    deletedAt?: string; // 软删除时间戳
     isRunning: boolean;
     processId?: number;
 }
@@ -37,6 +38,7 @@ interface DBEnvironment {
     userAgent?: string;
     createdAt: string;
     lastUsed: string;
+    deletedAt?: string;
 }
 
 // Chrome管理器类
@@ -57,11 +59,11 @@ export class ChromeManager {
         
         // 获取应用数据路径
         this.appDataPath = this.settingsManager.getSettings().dataPath || app.getPath('userData');
-        log.info(`应用数据路径: ${this.appDataPath}`);
+        log.info(`App data path: ${this.appDataPath}`);
         
         // 初始化存储目录
         this.environmentsDataDir = path.join(this.appDataPath, 'environments');
-        console.log(`环境数据目录: ${this.environmentsDataDir}`);
+        console.log(`Environment data directory: ${this.environmentsDataDir}`);
         
         // 确保目录存在
         if (!fs.existsSync(this.environmentsDataDir)) {
@@ -109,9 +111,29 @@ export class ChromeManager {
         proxy TEXT,
         userAgent TEXT,
         createdAt TEXT NOT NULL,
-        lastUsed TEXT NOT NULL
+        lastUsed TEXT NOT NULL,
+        deletedAt TEXT
       );
     `);
+        
+        // 检查是否需要迁移现有数据
+        this.migrateDatabase();
+    }
+    
+    // 数据库迁移
+    private migrateDatabase(): void {
+        try {
+            // 检查 deletedAt 列是否存在
+            const tableInfo = this.db.prepare("PRAGMA table_info(environments)").all() as Array<{name: string}>;
+            const hasDeletedAt = tableInfo.some(column => column.name === 'deletedAt');
+            
+            if (!hasDeletedAt) {
+                this.db.exec('ALTER TABLE environments ADD COLUMN deletedAt TEXT');
+                log.info('数据库已迁移：添加 deletedAt 列');
+            }
+        } catch (error) {
+            log.error('数据库迁移失败:', error);
+        }
     }
 
     // 获取默认Chrome数据目录
@@ -167,10 +189,10 @@ export class ChromeManager {
         return '';
     }
 
-    // 获取所有Chrome环境
+    // 获取所有Chrome环境（排除已删除的）
     public async getAllEnvironments(): Promise<ChromeEnvironment[]> {
         try {
-            const query = this.db.prepare('SELECT * FROM environments ORDER BY lastUsed DESC');
+            const query = this.db.prepare('SELECT * FROM environments WHERE deletedAt IS NULL ORDER BY lastUsed DESC');
             const dbEnvironments = query.all() as DBEnvironment[];
 
             // 转换为应用使用的结构
@@ -181,6 +203,24 @@ export class ChromeManager {
             }));
         } catch (error) {
             log.error('获取所有环境失败:', error);
+            throw error;
+        }
+    }
+    
+    // 获取回收站中的环境
+    public async getDeletedEnvironments(): Promise<ChromeEnvironment[]> {
+        try {
+            const query = this.db.prepare('SELECT * FROM environments WHERE deletedAt IS NOT NULL ORDER BY deletedAt DESC');
+            const dbEnvironments = query.all() as DBEnvironment[];
+
+            // 转换为应用使用的结构
+            return dbEnvironments.map(dbEnv => ({
+                ...dbEnv,
+                tags: dbEnv.tags ? JSON.parse(dbEnv.tags) as string[] : [],
+                isRunning: false // 已删除的环境不应该在运行
+            }));
+        } catch (error) {
+            log.error('获取已删除环境失败:', error);
             throw error;
         }
     }
@@ -335,7 +375,7 @@ export class ChromeManager {
         }
     }
 
-    // 删除Chrome环境
+    // 软删除Chrome环境（移到回收站）
     public async deleteEnvironment(id: string): Promise<boolean> {
         try {
             // 首先尝试关闭环境（如果正在运行）
@@ -344,15 +384,62 @@ export class ChromeManager {
             }
 
             // 获取环境信息
-            const stmt = this.db.prepare('SELECT * FROM environments WHERE id = ?');
+            const stmt = this.db.prepare('SELECT * FROM environments WHERE id = ? AND deletedAt IS NULL');
             const env = stmt.get(id) as ChromeEnvironment;
 
             if (!env) {
-                log.error(`尝试删除不存在的环境: ${id}`);
+                log.error(`尝试删除不存在或已删除的环境: ${id}`);
                 return false;
             }
 
-            // 从数据库中删除环境
+            // 软删除：设置 deletedAt 时间戳
+            const deletedAt = new Date().toISOString();
+            this.db.prepare('UPDATE environments SET deletedAt = ? WHERE id = ?').run(deletedAt, id);
+
+            log.info(`软删除Chrome环境: ${env.name} (${id})`);
+            return true;
+        } catch (error) {
+            log.error('软删除环境失败:', error);
+            throw error;
+        }
+    }
+    
+    // 从回收站恢复环境
+    public async restoreEnvironment(id: string): Promise<boolean> {
+        try {
+            // 获取已删除环境信息
+            const stmt = this.db.prepare('SELECT * FROM environments WHERE id = ? AND deletedAt IS NOT NULL');
+            const env = stmt.get(id) as ChromeEnvironment;
+
+            if (!env) {
+                log.error(`尝试恢复不存在或未删除的环境: ${id}`);
+                return false;
+            }
+
+            // 恢复：移除 deletedAt 时间戳
+            this.db.prepare('UPDATE environments SET deletedAt = NULL WHERE id = ?').run(id);
+
+            log.info(`恢复Chrome环境: ${env.name} (${id})`);
+            return true;
+        } catch (error) {
+            log.error('恢复环境失败:', error);
+            throw error;
+        }
+    }
+    
+    // 永久删除环境（从回收站彻底删除）
+    public async permanentlyDeleteEnvironment(id: string): Promise<boolean> {
+        try {
+            // 获取已删除环境信息
+            const stmt = this.db.prepare('SELECT * FROM environments WHERE id = ? AND deletedAt IS NOT NULL');
+            const env = stmt.get(id) as DBEnvironment;
+
+            if (!env) {
+                log.error(`尝试永久删除不存在或未删除的环境: ${id}`);
+                return false;
+            }
+
+            // 从数据库中彻底删除环境
             this.db.prepare('DELETE FROM environments WHERE id = ?').run(id);
 
             // 删除环境数据目录
@@ -360,10 +447,42 @@ export class ChromeManager {
                 fs.rmSync(env.dataDir, { recursive: true, force: true });
             }
 
-            log.info(`删除Chrome环境: ${env.name} (${id})`);
+            log.info(`永久删除Chrome环境: ${env.name} (${id})`);
             return true;
         } catch (error) {
-            log.error('删除环境失败:', error);
+            log.error('永久删除环境失败:', error);
+            throw error;
+        }
+    }
+    
+    // 清空回收站（删除超过30天的环境）
+    public async cleanupTrash(): Promise<number> {
+        try {
+            // 计算30天前的时间戳
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            const cutoffDate = thirtyDaysAgo.toISOString();
+
+            // 获取需要清理的环境
+            const stmt = this.db.prepare('SELECT * FROM environments WHERE deletedAt IS NOT NULL AND deletedAt < ?');
+            const envs = stmt.all(cutoffDate) as DBEnvironment[];
+
+            let cleanedCount = 0;
+            for (const env of envs) {
+                // 删除数据目录
+                if (fs.existsSync(env.dataDir)) {
+                    fs.rmSync(env.dataDir, { recursive: true, force: true });
+                }
+                cleanedCount++;
+            }
+
+            // 从数据库中删除这些环境
+            this.db.prepare('DELETE FROM environments WHERE deletedAt IS NOT NULL AND deletedAt < ?').run(cutoffDate);
+
+            log.info(`清理回收站: 删除了 ${cleanedCount} 个过期环境`);
+            return cleanedCount;
+        } catch (error) {
+            log.error('清理回收站失败:', error);
             throw error;
         }
     }

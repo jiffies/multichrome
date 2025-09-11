@@ -1,6 +1,13 @@
-import React from 'react';
-import { Menu, Button, Tooltip, Popconfirm } from 'antd';
-import { FolderOutlined, AppstoreOutlined, DeleteOutlined, SettingOutlined } from '@ant-design/icons';
+import React, { useState } from 'react';
+import { Box, NavList, IconButton, Tooltip, Dialog } from '@primer/react';
+import { 
+    AppsIcon, 
+    FileDirectoryIcon, 
+    TrashIcon, 
+    GearIcon, 
+    InboxIcon,
+    XIcon
+} from '@primer/octicons-react';
 
 interface SidebarProps {
     groups: string[];
@@ -9,6 +16,8 @@ interface SidebarProps {
     onDeleteGroup?: (group: string) => void;
     emptyGroups: string[]; // 空分组列表
     onSettingsClick?: () => void; // 设置点击回调
+    onTrashClick?: () => void; // 回收站点击回调
+    collapsed?: boolean; // 是否折叠
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ 
@@ -17,63 +26,131 @@ const Sidebar: React.FC<SidebarProps> = ({
     onSelectGroup,
     onDeleteGroup,
     emptyGroups = [],
-    onSettingsClick
+    onSettingsClick,
+    onTrashClick,
+    collapsed = false
 }) => {
+    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState<string | null>(null);
+
+    const handleDeleteGroup = (groupName: string) => {
+        if (onDeleteGroup) {
+            onDeleteGroup(groupName);
+        }
+        setDeleteConfirmOpen(null);
+    };
+
     return (
-        <aside className="w-48 bg-white border-r border-gray-200">
-            <Menu
-                mode="inline"
-                selectedKeys={[currentGroup]}
-                style={{ height: '100%', borderRight: 0 }}
-                items={[
-                    {
-                        key: '全部',
-                        icon: <AppstoreOutlined />,
-                        label: '全部',
-                        onClick: () => onSelectGroup('全部')
-                    },
-                    ...groups
+        <>
+            <Box as="aside" height="100%" backgroundColor="canvas.default">
+                <NavList>
+                    <NavList.Item 
+                        href="#" 
+                        aria-current={currentGroup === '全部' ? 'page' : undefined}
+                        onClick={(e) => {
+                            e.preventDefault();
+                            onSelectGroup('全部');
+                        }}
+                    >
+                        <NavList.LeadingVisual>
+                            <AppsIcon />
+                        </NavList.LeadingVisual>
+                        {!collapsed && '全部'}
+                    </NavList.Item>
+
+                    {groups
                         .filter(group => group !== '全部')
-                        .map(group => ({
-                            key: group,
-                            icon: <FolderOutlined />,
-                            label: (
-                                <div className="flex justify-between items-center w-full">
-                                    <span>{group}</span>
-                                    {emptyGroups.includes(group) && onDeleteGroup && (
-                                        <Popconfirm
-                                            title="确定要删除此分组吗？"
-                                            onConfirm={(e) => {
-                                                e?.stopPropagation();
-                                                onDeleteGroup(group);
-                                            }}
-                                            okText="是"
-                                            cancelText="否"
-                                        >
-                                            <Tooltip title="删除空分组">
-                                                <Button
-                                                    type="text"
+                        .map(group => (
+                            <NavList.Item
+                                key={group}
+                                href="#"
+                                aria-current={currentGroup === group ? 'page' : undefined}
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    onSelectGroup(group);
+                                }}
+                            >
+                                <NavList.LeadingVisual>
+                                    <FileDirectoryIcon />
+                                </NavList.LeadingVisual>
+                                {!collapsed && (
+                                    <Box display="flex" justifyContent="space-between" alignItems="center" width="100%">
+                                        <Box>{group}</Box>
+                                        {emptyGroups.includes(group) && onDeleteGroup && (
+                                            <Tooltip aria-label="删除空分组">
+                                                <IconButton
+                                                    aria-label="删除分组"
+                                                    icon={XIcon}
+                                                    variant="invisible"
                                                     size="small"
-                                                    icon={<DeleteOutlined />}
-                                                    className="opacity-60 hover:opacity-100"
-                                                    onClick={(e) => e.stopPropagation()}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setDeleteConfirmOpen(group);
+                                                    }}
                                                 />
                                             </Tooltip>
-                                        </Popconfirm>
-                                    )}
-                                </div>
-                            ),
-                            onClick: () => onSelectGroup(group)
-                        })),
-                    {
-                        key: '设置',
-                        icon: <SettingOutlined />,
-                        label: '设置',
-                        onClick: onSettingsClick
+                                        )}
+                                    </Box>
+                                )}
+                            </NavList.Item>
+                        ))
                     }
-                ]}
-            />
-        </aside>
+
+                    <NavList.Item 
+                        href="#"
+                        onClick={(e) => {
+                            e.preventDefault();
+                            onTrashClick?.();
+                        }}
+                    >
+                        <NavList.LeadingVisual>
+                            <InboxIcon />
+                        </NavList.LeadingVisual>
+                        {!collapsed && '回收站'}
+                    </NavList.Item>
+
+                    <NavList.Item 
+                        href="#"
+                        onClick={(e) => {
+                            e.preventDefault();
+                            onSettingsClick?.();
+                        }}
+                    >
+                        <NavList.LeadingVisual>
+                            <GearIcon />
+                        </NavList.LeadingVisual>
+                        {!collapsed && '设置'}
+                    </NavList.Item>
+                </NavList>
+            </Box>
+
+            {deleteConfirmOpen && (
+                <Dialog
+                    isOpen={true}
+                    onDismiss={() => setDeleteConfirmOpen(null)}
+                    aria-labelledby="delete-group-title"
+                >
+                    <Dialog.Header id="delete-group-title">
+                        确认删除分组
+                    </Dialog.Header>
+                    <Box p={3}>
+                        确定要删除分组 "{deleteConfirmOpen}" 吗？
+                    </Box>
+                    <Dialog.Footer>
+                        <Dialog.Buttons>
+                            <Dialog.Button 
+                                variant="danger"
+                                onClick={() => handleDeleteGroup(deleteConfirmOpen)}
+                            >
+                                删除
+                            </Dialog.Button>
+                            <Dialog.Button onClick={() => setDeleteConfirmOpen(null)}>
+                                取消
+                            </Dialog.Button>
+                        </Dialog.Buttons>
+                    </Dialog.Footer>
+                </Dialog>
+            )}
+        </>
     );
 };
 

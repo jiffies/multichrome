@@ -7,10 +7,11 @@
     "scripts": {
         "dev": "concurrently \"npm run dev:vite\" \"npm run dev:electron\"",
         "dev:vite": "vite",
-        "dev:electron": "powershell \"$env:NODE_ENV='development'; tsc -p electron/tsconfig.json; copy electron\\preload.cjs dist\\electron\\preload.cjs; electron .\"",
+        "dev:electron": "powershell \"$env:NODE_ENV='development'; tsc -p electron/tsconfig.json; copy electron\\preload.cjs dist\\electron\\preload.cjs; npx electron .\"",
         "build": "npm run build:vite && npm run build:electron",
         "build:vite": "vite build",
         "build:electron": "powershell \"tsc -p electron/tsconfig.json; copy electron\\preload.cjs dist\\electron\\preload.cjs\"",
+        "start": "npx electron .",
         "package:win": "electron-builder --win",
         "lint": "eslint . --ext .ts,.tsx",
         "lint:fix": "eslint . --ext .ts,.tsx --fix"
@@ -25,6 +26,9 @@
     "author": "",
     "license": "MIT",
     "dependencies": {
+        "@primer/octicons-react": "^19.18.0",
+        "@primer/primitives": "^11.1.0",
+        "@primer/react": "^37.31.0",
         "@tailwindcss/vite": "^4.0.15",
         "antd": "^5.12.5",
         "better-sqlite3": "^9.2.2",
@@ -34,6 +38,7 @@
         "react": "^18.2.0",
         "react-dom": "^18.2.0",
         "react-icons": "^4.12.0",
+        "styled-components": "^5.3.11",
         "tailwindcss": "^4.0.15",
         "uuid": "^9.0.1"
     },

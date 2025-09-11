@@ -10,6 +10,7 @@ export interface ChromeEnvironment {
     userAgent?: string;
     createdAt: string;
     lastUsed: string;
+    deletedAt?: string; // 软删除时间戳
     isRunning: boolean;
     processId?: number;
 }
@@ -21,10 +22,16 @@ export interface ElectronAPI {
         create: (name: string, groupName: string, notes: string) => Promise<ChromeEnvironment>;
         launch: (id: string) => Promise<boolean>;
         close: (id: string) => Promise<boolean>;
-        delete: (id: string) => Promise<boolean>;
+        delete: (id: string) => Promise<boolean>; // 软删除（移到回收站）
         update: (id: string, data: Partial<ChromeEnvironment>) => Promise<ChromeEnvironment>;
         getEmptyGroups: () => Promise<string[]>;
         deleteEmptyGroup: (groupName: string) => Promise<boolean>;
+    };
+    trash: {
+        getDeletedEnvironments: () => Promise<ChromeEnvironment[]>;
+        restore: (id: string) => Promise<boolean>;
+        permanentlyDelete: (id: string) => Promise<boolean>;
+        cleanup: () => Promise<number>;
     };
     settings: {
         getSettings: () => Promise<{dataPath: string}>;
@@ -38,4 +45,7 @@ declare global {
     interface Window {
         electronAPI: ElectronAPI;
     }
-} 
+}
+
+// 导出错误类型
+export * from './errors'; 

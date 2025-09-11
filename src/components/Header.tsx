@@ -1,8 +1,6 @@
 import React from 'react';
-import { Button, Typography } from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
-
-const { Title } = Typography;
+import { Box, Heading, Button } from '@primer/react';
+import { PlusIcon } from '@primer/octicons-react';
 
 interface HeaderProps {
     onCreateEnvironment: () => void;
@@ -10,21 +8,26 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ onCreateEnvironment }) => {
     return (
-        <header className="flex items-center justify-between px-6 py-4 bg-white shadow-sm">
-            <div className="flex items-center">
-                <Title level={4} style={{ margin: 0 }}>
+        <Box display="flex" alignItems="center" justifyContent="space-between" width="100%">
+            <Box display="flex" alignItems="center">
+                <Heading as="h1" sx={{ fontSize: 3, margin: 0, display: ['none', 'block'] }}>
                     MultiChrome - Chrome多环境管理
-                </Title>
-            </div>
+                </Heading>
+                <Heading as="h1" sx={{ fontSize: 2, margin: 0, display: ['block', 'none'] }}>
+                    MultiChrome
+                </Heading>
+            </Box>
 
             <Button
-                type="primary"
-                icon={<PlusOutlined />}
+                variant="primary"
+                leadingIcon={PlusIcon}
                 onClick={onCreateEnvironment}
+                sx={{ marginLeft: 3 }}
             >
-                新建窗口
+                <Box as="span" sx={{ display: ['none', 'inline'] }}>新建窗口</Box>
+                <Box as="span" sx={{ display: ['inline', 'none'] }}>新建</Box>
             </Button>
-        </header>
+        </Box>
     );
 };
 

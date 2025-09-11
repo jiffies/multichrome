@@ -1,18 +1,18 @@
 import React from 'react';
-import { Table, Button, Tag, Space, Empty, Alert, Tooltip } from 'antd';
+import { Table, Tooltip } from 'antd';
+import { Box, Heading, Button, Label, Text } from '@primer/react';
 import {
-    PlayCircleOutlined,
-    CloseCircleOutlined,
-    DeleteOutlined,
-    ReloadOutlined,
-} from '@ant-design/icons';
+    PlayIcon,
+    StopIcon,
+    TrashIcon,
+    SyncIcon,
+} from '@primer/octicons-react';
 import { ChromeEnvironment } from '../types';
 import dayjs from 'dayjs';
 
 interface EnvironmentListProps {
     environments: ChromeEnvironment[];
     loading: boolean;
-    error: string | null;
     onLaunch: (id: string) => void;
     onClose: (id: string) => void;
     onDelete: (id: string) => void;
@@ -22,49 +22,66 @@ interface EnvironmentListProps {
 const EnvironmentList: React.FC<EnvironmentListProps> = ({
     environments,
     loading,
-    error,
     onLaunch,
     onClose,
     onDelete,
     onRefresh
 }) => {
-    // 如果有错误，显示错误信息
-    if (error) {
-        return (
-            <Alert
-                message="错误"
-                description={error}
-                type="error"
-                showIcon
-                action={
-                    <Button onClick={onRefresh} icon={<ReloadOutlined />}>
-                        重试
-                    </Button>
-                }
-            />
-        );
-    }
 
     // 如果没有环境，显示空状态
     if (!loading && environments.length === 0) {
         return (
-            <Empty
-                description="没有Chrome环境"
-                image={Empty.PRESENTED_IMAGE_SIMPLE}
-            >
-                <Button type="primary" onClick={onRefresh} icon={<ReloadOutlined />}>
-                    刷新
-                </Button>
-            </Empty>
+            <Box>
+                <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
+                    <Heading as="h2" sx={{ fontSize: 3 }}>窗口管理</Heading>
+                    <Button
+                        variant="outline"
+                        leadingIcon={SyncIcon}
+                        onClick={onRefresh}
+                    >
+                        刷新列表
+                    </Button>
+                </Box>
+                <Box
+                    display="flex"
+                    flexDirection="column"
+                    alignItems="center"
+                    justifyContent="center"
+                    py={8}
+                    textAlign="center"
+                >
+                    <Box mb={4}>
+                        <PlayIcon size={56} />
+                    </Box>
+                    <Heading as="h3" sx={{ fontSize: 2, mb: 2 }}>没有Chrome环境</Heading>
+                    <Text sx={{ mb: 4, color: 'fg.muted' }}>
+                        点击右上角的"新建窗口"按钮创建你的第一个Chrome环境
+                    </Text>
+                    <Button variant="primary" leadingIcon={SyncIcon} onClick={onRefresh}>
+                        刷新
+                    </Button>
+                </Box>
+            </Box>
         );
     }
 
     const columns = [
         {
+            title: '状态',
+            key: 'status',
+            width: 80,
+            render: (_: any, record: ChromeEnvironment) => (
+                <Label variant={record.isRunning ? 'success' : 'default'}>
+                    {record.isRunning ? '运行' : '停止'}
+                </Label>
+            )
+        },
+        {
             title: 'ID',
             dataIndex: 'id',
             key: 'id',
             width: 90,
+            responsive: ['lg'] as const,
             render: (id: string) => id.substring(0, 8)
         },
         {
@@ -73,6 +90,7 @@ const EnvironmentList: React.FC<EnvironmentListProps> = ({
             key: 'dataDir',
             width: 120,
             ellipsis: true,
+            responsive: ['xl'] as const,
             render: (dataDir: string) => (
                 <Tooltip title={dataDir}>
                     <span>{dataDir.split('/').pop()}</span>
@@ -83,7 +101,8 @@ const EnvironmentList: React.FC<EnvironmentListProps> = ({
             title: '分组',
             dataIndex: 'groupName',
             key: 'groupName',
-            width: 120
+            width: 120,
+            responsive: ['sm'] as const
         },
         {
             title: '名称',
@@ -94,19 +113,21 @@ const EnvironmentList: React.FC<EnvironmentListProps> = ({
             title: '备注',
             dataIndex: 'notes',
             key: 'notes',
-            ellipsis: true
+            ellipsis: true,
+            responsive: ['md'] as const
         },
         {
             title: '标签',
             key: 'tags',
             dataIndex: 'tags',
             width: 200,
+            responsive: ['lg'] as const,
             render: (tags: string[]) => (
-                <span>
+                <Box>
                     {tags.map(tag => (
-                        <Tag key={tag}>{tag}</Tag>
+                        <Label key={tag} sx={{ mr: 1 }}>{tag}</Label>
                     ))}
-                </span>
+                </Box>
             )
         },
         {
@@ -114,6 +135,7 @@ const EnvironmentList: React.FC<EnvironmentListProps> = ({
             dataIndex: 'proxy',
             key: 'proxy',
             width: 200,
+            responsive: ['xl'] as const,
             render: (proxy?: string) => proxy || '-'
         },
         {
@@ -121,59 +143,59 @@ const EnvironmentList: React.FC<EnvironmentListProps> = ({
             dataIndex: 'lastUsed',
             key: 'lastUsed',
             width: 150,
-            render: (lastUsed: string) => dayjs(lastUsed).format('YYYY-MM-DD HH:mm')
+            responsive: ['lg'] as const,
+            render: (lastUsed: string) => dayjs(lastUsed).format('MM-DD HH:mm')
         },
         {
             title: '操作',
             key: 'action',
             width: 150,
             render: (_: any, record: ChromeEnvironment) => (
-                <Space size="small">
+                <Box display="flex" sx={{ gap: 1 }}>
                     {record.isRunning ? (
                         <Button
-                            icon={<CloseCircleOutlined />}
-                            type="default"
-                            onClick={() => onClose(record.id)}
+                            leadingIcon={StopIcon}
+                            variant="outline"
                             size="small"
+                            onClick={() => onClose(record.id)}
                         >
-                            关闭
+                            <Box as="span" sx={{ display: ['none', 'inline'] }}>关闭</Box>
                         </Button>
                     ) : (
                         <Button
-                            icon={<PlayCircleOutlined />}
-                            type="primary"
-                            onClick={() => onLaunch(record.id)}
+                            leadingIcon={PlayIcon}
+                            variant="primary"
                             size="small"
+                            onClick={() => onLaunch(record.id)}
                         >
-                            打开
+                            <Box as="span" sx={{ display: ['none', 'inline'] }}>打开</Box>
                         </Button>
                     )}
                     <Button
-                        icon={<DeleteOutlined />}
-                        danger
-                        type="link"
-                        onClick={() => onDelete(record.id)}
+                        leadingIcon={TrashIcon}
+                        variant="danger"
                         size="small"
+                        onClick={() => onDelete(record.id)}
                     />
-                </Space>
+                </Box>
             )
         }
     ];
 
     return (
-        <div className="h-full flex flex-col">
-            <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold">窗口管理</h2>
+        <Box height="100%" display="flex" flexDirection="column">
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
+                <Heading as="h2" sx={{ fontSize: 3 }}>窗口管理</Heading>
                 <Button
-                    type="default"
-                    icon={<ReloadOutlined />}
+                    variant="outline"
+                    leadingIcon={SyncIcon}
                     onClick={onRefresh}
                 >
                     刷新列表
                 </Button>
-            </div>
+            </Box>
 
-            <div className="flex-1 overflow-auto">
+            <Box flex={1} overflow="auto">
                 <Table
                     columns={columns}
                     dataSource={environments}
@@ -182,8 +204,8 @@ const EnvironmentList: React.FC<EnvironmentListProps> = ({
                     pagination={false}
                     scroll={{ y: 'calc(100vh - 280px)' }}
                 />
-            </div>
-        </div>
+            </Box>
+        </Box>
     );
 };
 
