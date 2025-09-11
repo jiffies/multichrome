@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Table, Tooltip } from 'antd';
 import { Box, Heading, Button, Label, Text } from '@primer/react';
 import {
@@ -27,6 +27,7 @@ const EnvironmentList: React.FC<EnvironmentListProps> = ({
     onDelete,
     onRefresh
 }) => {
+    const [tableHeight] = useState('calc(100vh - 160px)');
 
     // 如果没有环境，显示空状态
     if (!loading && environments.length === 0) {
@@ -70,6 +71,7 @@ const EnvironmentList: React.FC<EnvironmentListProps> = ({
             title: '状态',
             key: 'status',
             width: 80,
+            fixed: 'left' as const,
             render: (_: any, record: ChromeEnvironment) => (
                 <Label variant={record.isRunning ? 'success' : 'default'}>
                     {record.isRunning ? '运行' : '停止'}
@@ -80,20 +82,18 @@ const EnvironmentList: React.FC<EnvironmentListProps> = ({
             title: 'ID',
             dataIndex: 'id',
             key: 'id',
-            width: 90,
-            responsive: ['lg'] as const,
+            width: 100,
             render: (id: string) => id.substring(0, 8)
         },
         {
             title: '缓存目录',
             dataIndex: 'dataDir',
             key: 'dataDir',
-            width: 120,
+            width: 180,
             ellipsis: true,
-            responsive: ['xl'] as const,
             render: (dataDir: string) => (
                 <Tooltip title={dataDir}>
-                    <span>{dataDir.split('/').pop()}</span>
+                    <span>{dataDir.split(/[/\\]/).pop()}</span>
                 </Tooltip>
             )
         },
@@ -101,27 +101,27 @@ const EnvironmentList: React.FC<EnvironmentListProps> = ({
             title: '分组',
             dataIndex: 'groupName',
             key: 'groupName',
-            width: 120,
-            responsive: ['sm'] as const
+            width: 120
         },
         {
             title: '名称',
             dataIndex: 'name',
-            key: 'name'
+            key: 'name',
+            width: 200,
+            ellipsis: true
         },
         {
             title: '备注',
             dataIndex: 'notes',
             key: 'notes',
-            ellipsis: true,
-            responsive: ['md'] as const
+            width: 250,
+            ellipsis: true
         },
         {
             title: '标签',
             key: 'tags',
             dataIndex: 'tags',
             width: 200,
-            responsive: ['lg'] as const,
             render: (tags: string[]) => (
                 <Box>
                     {tags.map(tag => (
@@ -134,22 +134,22 @@ const EnvironmentList: React.FC<EnvironmentListProps> = ({
             title: '代理',
             dataIndex: 'proxy',
             key: 'proxy',
-            width: 200,
-            responsive: ['xl'] as const,
+            width: 180,
+            ellipsis: true,
             render: (proxy?: string) => proxy || '-'
         },
         {
             title: '上次使用',
             dataIndex: 'lastUsed',
             key: 'lastUsed',
-            width: 150,
-            responsive: ['lg'] as const,
+            width: 130,
             render: (lastUsed: string) => dayjs(lastUsed).format('MM-DD HH:mm')
         },
         {
             title: '操作',
             key: 'action',
-            width: 150,
+            width: 160,
+            fixed: 'right' as const,
             render: (_: any, record: ChromeEnvironment) => (
                 <Box display="flex" sx={{ gap: 1 }}>
                     {record.isRunning ? (
@@ -195,14 +195,18 @@ const EnvironmentList: React.FC<EnvironmentListProps> = ({
                 </Button>
             </Box>
 
-            <Box flex={1} overflow="auto">
+            <Box flex={1}>
                 <Table
                     columns={columns}
                     dataSource={environments}
                     rowKey="id"
                     loading={loading}
                     pagination={false}
-                    scroll={{ y: 'calc(100vh - 280px)' }}
+                    size="middle"
+                    scroll={{ 
+                        y: tableHeight,
+                        x: 'max-content'
+                    }}
                 />
             </Box>
         </Box>

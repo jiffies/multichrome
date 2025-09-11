@@ -130,22 +130,21 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             </Box>
 
             <Dialog.Footer>
-                <Dialog.Buttons>
-                    <Button 
-                        variant="primary" 
-                        onClick={handleSave}
-                        loading={loading}
-                        disabled={loading}
-                    >
-                        保存
-                    </Button>
+                <Box display="flex" justifyContent="flex-end" sx={{ gap: 2 }}>
                     <Button 
                         onClick={handleCancel}
                         disabled={loading}
                     >
                         取消
                     </Button>
-                </Dialog.Buttons>
+                    <Button 
+                        variant="primary" 
+                        onClick={handleSave}
+                        disabled={loading}
+                    >
+                        {loading ? '保存中...' : '保存'}
+                    </Button>
+                </Box>
             </Dialog.Footer>
         </Dialog>
     );

@@ -34,7 +34,7 @@ const ResponsiveLayout: React.FC<ResponsiveLayoutProps> = ({
     if (isMobile) {
         return (
             <>
-                <Box height="100vh" display="flex" flexDirection="column">
+                <Box height="100vh" display="flex" flexDirection="column" width="100vw">
                     <Box
                         as="header"
                         px={3}
@@ -84,7 +84,7 @@ const ResponsiveLayout: React.FC<ResponsiveLayoutProps> = ({
 
     // 桌面端布局
     return (
-        <PageLayout>
+        <PageLayout containerWidth="full" padding="none" sx={{ height: '100vh', width: '100vw', overflow: 'hidden' }}>
             <PageLayout.Header>
                 <Box
                     px={3}
@@ -110,14 +110,15 @@ const ResponsiveLayout: React.FC<ResponsiveLayoutProps> = ({
             <PageLayout.Pane 
                 position="start" 
                 width={sidebarCollapsed ? 'narrow' : 'medium'}
-                resizable={false}
+                resizable={true}
+                sx={{ height: '100%' }}
             >
                 {React.cloneElement(sidebar as React.ReactElement, { 
                     collapsed: sidebarCollapsed 
                 })}
             </PageLayout.Pane>
 
-            <PageLayout.Content>
+            <PageLayout.Content padding="none" sx={{ flex: 1, overflow: 'hidden', height: 'calc(100vh - 60px)' }}>
                 {content}
             </PageLayout.Content>
         </PageLayout>

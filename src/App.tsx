@@ -85,7 +85,7 @@ const AppContent: React.FC = () => {
                 content={
                     <ConfigProvider locale={zhCN}>
                         <AntApp>
-                            <Box p={3} height="100%" overflow="auto">
+                            <Box p={3} height="100%" overflow="hidden" display="flex" flexDirection="column">
                                 <EnvironmentList
                                     environments={filteredEnvironments}
                                     loading={state.loading}
@@ -128,7 +128,7 @@ const App: React.FC = () => {
     return (
         <ErrorBoundary>
             <ThemeProvider>
-                <BaseStyles>
+                <BaseStyles sx={{ height: '100%', width: '100%', overflow: 'hidden' }}>
                     <EnvironmentProvider>
                         <SettingsProvider>
                             <AppContent />

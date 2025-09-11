@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, shell, dialog } from 'electron';
+import { app, BrowserWindow, ipcMain, shell, dialog, screen } from 'electron';
 import path from 'path';
 import log from 'electron-log';
 import { ChromeManager, ChromeEnvironment } from './chromeManager.js';
@@ -45,10 +45,25 @@ const chromeManager = new ChromeManager();
 const settingsManager = new SettingsManager();
 
 function createWindow() {
+    // 获取主显示器信息
+    const primaryDisplay = screen.getPrimaryDisplay();
+    const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
+    
+    // 为超宽屏（3440x1440）优化：窗口大小为屏幕右半部分
+    const windowWidth = Math.floor(screenWidth / 2) - 50; // 右半边，留50px边距
+    const windowHeight = screenHeight - 100; // 留100px垂直边距
+    const windowX = Math.floor(screenWidth / 2) + 25; // 放在屏幕右半边
+    const windowY = 50; // 顶部留50px边距
+    
     // 创建主窗口
     mainWindow = new BrowserWindow({
-        width: 1200,
-        height: 800,
+        width: windowWidth,
+        height: windowHeight,
+        x: windowX,
+        y: windowY,
+        minWidth: 1000, // 最小宽度
+        minHeight: 600, // 最小高度
+        show: false, // 先隐藏窗口，等加载完成后再显示
         webPreferences: {
             preload: path.join(__dirname, 'preload.cjs'),
             contextIsolation: true,
@@ -90,6 +105,11 @@ function createWindow() {
     mainWindow.webContents.setWindowOpenHandler(({ url }) => {
         shell.openExternal(url);
         return { action: 'deny' };
+    });
+
+    // 页面加载完成后显示窗口
+    mainWindow.once('ready-to-show', () => {
+        mainWindow?.show();
     });
 
     // 窗口关闭时清空引用

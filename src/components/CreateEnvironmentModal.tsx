@@ -142,22 +142,21 @@ const CreateEnvironmentModal: React.FC<CreateEnvironmentModalProps> = ({
             </Box>
 
             <Dialog.Footer>
-                <Dialog.Buttons>
-                    <Button 
-                        variant="primary" 
-                        onClick={handleSubmit}
-                        loading={loading}
-                        disabled={loading}
-                    >
-                        创建
-                    </Button>
+                <Box display="flex" justifyContent="flex-end" sx={{ gap: 2 }}>
                     <Button 
                         onClick={handleCancel}
                         disabled={loading}
                     >
                         取消
                     </Button>
-                </Dialog.Buttons>
+                    <Button 
+                        variant="primary" 
+                        onClick={handleSubmit}
+                        disabled={loading}
+                    >
+                        {loading ? '创建中...' : '创建'}
+                    </Button>
+                </Box>
             </Dialog.Footer>
         </Dialog>
     );

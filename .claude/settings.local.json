@@ -11,7 +11,13 @@
       "mcp__context7__resolve-library-id",
       "mcp__context7__get-library-docs",
       "Bash(npm run dev:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(ls:*)",
+      "Bash(sqlite3:*)",
+      "Read(//d/chrome多开/**)",
+      "Read(//c/Users/lcq/AppData/Roaming/multichrome/**)",
+      "Bash(node:*)",
+      "WebSearch"
     ],
     "deny": [],
     "ask": []
