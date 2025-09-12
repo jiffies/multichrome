@@ -28,8 +28,8 @@ const AppContent: React.FC = () => {
 
 
     // 创建新环境
-    const handleCreateEnvironment = async (name: string, groupName: string, notes: string) => {
-        await actions.createEnvironment(name, groupName, notes);
+    const handleCreateEnvironment = async (name: string, groupName: string, notes: string, walletAddress?: string) => {
+        await actions.createEnvironment(name, groupName, notes, walletAddress);
         setCreateModalOpen(false);
     };
 

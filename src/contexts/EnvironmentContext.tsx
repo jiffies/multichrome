@@ -67,7 +67,7 @@ interface EnvironmentContextType {
     actions: {
         loadEnvironments: () => Promise<void>;
         loadEmptyGroups: () => Promise<void>;
-        createEnvironment: (name: string, groupName: string, notes: string) => Promise<void>;
+        createEnvironment: (name: string, groupName: string, notes: string, walletAddress?: string) => Promise<void>;
         launchEnvironment: (id: string) => Promise<void>;
         closeEnvironment: (id: string) => Promise<void>;
         deleteEnvironment: (id: string) => Promise<void>;
@@ -121,14 +121,14 @@ export const EnvironmentProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }, [handleError]);
 
     // 创建新环境
-    const createEnvironment = useCallback(async (name: string, groupName: string, notes: string) => {
+    const createEnvironment = useCallback(async (name: string, groupName: string, notes: string, walletAddress?: string) => {
         if (!window.electronAPI || !window.electronAPI.chromeEnvironments) {
             handleError(new Error('Electron API未正确加载'), '创建环境');
             return;
         }
 
         try {
-            const newEnv = await window.electronAPI.chromeEnvironments.create(name, groupName, notes);
+            const newEnv = await window.electronAPI.chromeEnvironments.create(name, groupName, notes, walletAddress);
             dispatch({ type: 'ADD_ENVIRONMENT', payload: newEnv });
             // 重新加载空分组（因为可能创建了新分组）
             loadEmptyGroups();

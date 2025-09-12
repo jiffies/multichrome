@@ -146,8 +146,8 @@ const Sidebar: React.FC<SidebarProps> = ({
                 </Box>
 
                 {/* 底部工具栏 */}
-                <Box p={2} borderTop="1px solid" borderColor="border.default">
-                    <Box display="flex" flexDirection={collapsed ? 'column' : 'row'} sx={{ gap: 1 }} justifyContent={collapsed ? 'center' : 'flex-start'}>
+                <Box borderTop="1px solid" borderColor="border.default" display="flex" alignItems="center" justifyContent="center" sx={{ minHeight: 'auto', py: 2 }}>
+                    <Box display="flex" flexDirection={collapsed ? 'column' : 'row'} sx={{ gap: 1 }} justifyContent="center" alignItems="center">
                         <Tooltip aria-label="回收站" side={collapsed ? 'right' : 'top'}>
                             <IconButton
                                 aria-label="回收站"

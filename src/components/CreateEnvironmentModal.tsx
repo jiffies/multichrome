@@ -4,7 +4,7 @@ import { Dialog } from '@primer/react/experimental';
 
 interface CreateEnvironmentModalProps {
     open: boolean;
-    onOk: (name: string, groupName: string, notes: string) => void;
+    onOk: (name: string, groupName: string, notes: string, walletAddress?: string) => void;
     onCancel: () => void;
     groups: string[];
 }
@@ -19,7 +19,8 @@ const CreateEnvironmentModal: React.FC<CreateEnvironmentModalProps> = ({
     const [formData, setFormData] = useState({
         name: '',
         groupName: '',
-        notes: ''
+        notes: '',
+        walletAddress: ''
     });
     const [errors, setErrors] = useState<{[key: string]: string}>({});
 
@@ -47,15 +48,16 @@ const CreateEnvironmentModal: React.FC<CreateEnvironmentModalProps> = ({
 
         try {
             setLoading(true);
-            console.log('表单提交数据:', formData.name, formData.groupName, formData.notes);
+            console.log('表单提交数据:', formData.name, formData.groupName, formData.notes, formData.walletAddress);
             
-            await onOk(formData.name, formData.groupName, formData.notes);
+            await onOk(formData.name, formData.groupName, formData.notes, formData.walletAddress);
             
             // 重置表单
             setFormData({
                 name: '',
                 groupName: '',
-                notes: ''
+                notes: '',
+                walletAddress: ''
             });
             setErrors({});
         } catch (error) {
@@ -70,7 +72,8 @@ const CreateEnvironmentModal: React.FC<CreateEnvironmentModalProps> = ({
         setFormData({
             name: '',
             groupName: '',
-            notes: ''
+            notes: '',
+            walletAddress: ''
         });
         setErrors({});
         onCancel();
@@ -130,6 +133,15 @@ const CreateEnvironmentModal: React.FC<CreateEnvironmentModalProps> = ({
                             {errors.groupName}
                         </FormControl.Validation>
                     )}
+                </FormControl>
+
+                <FormControl>
+                    <FormControl.Label>钱包地址</FormControl.Label>
+                    <TextInput
+                        placeholder="可选的钱包地址，例如: 0x1234...abcd"
+                        value={formData.walletAddress}
+                        onChange={(e) => setFormData({...formData, walletAddress: e.target.value})}
+                    />
                 </FormControl>
 
                 <FormControl>

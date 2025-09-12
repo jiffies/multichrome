@@ -9,12 +9,13 @@ try {
             getAll: () => ipcRenderer.invoke("get-chrome-environments"),
 
             // 创建新环境
-            create: (name, groupName, notes) =>
+            create: (name, groupName, notes, walletAddress) =>
                 ipcRenderer.invoke(
                     "create-chrome-environment",
                     name,
                     groupName,
-                    notes
+                    notes,
+                    walletAddress
                 ),
 
             // 启动环境

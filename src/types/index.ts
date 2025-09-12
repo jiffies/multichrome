@@ -4,6 +4,7 @@ export interface ChromeEnvironment {
     name: string;
     groupName: string;
     notes: string;
+    walletAddress?: string; // 钱包地址
     dataDir: string;
     tags: string[];
     proxy?: string;
@@ -19,7 +20,7 @@ export interface ChromeEnvironment {
 export interface ElectronAPI {
     chromeEnvironments: {
         getAll: () => Promise<ChromeEnvironment[]>;
-        create: (name: string, groupName: string, notes: string) => Promise<ChromeEnvironment>;
+        create: (name: string, groupName: string, notes: string, walletAddress?: string) => Promise<ChromeEnvironment>;
         launch: (id: string) => Promise<boolean>;
         close: (id: string) => Promise<boolean>;
         delete: (id: string) => Promise<boolean>; // 软删除（移到回收站）

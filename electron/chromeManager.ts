@@ -15,6 +15,7 @@ export interface ChromeEnvironment {
     name: string;
     groupName: string;
     notes: string;
+    walletAddress?: string; // 钱包地址
     dataDir: string;
     tags: string[];
     proxy?: string;
@@ -32,6 +33,7 @@ interface DBEnvironment {
     name: string;
     groupName: string;
     notes: string;
+    walletAddress?: string; // 钱包地址
     dataDir: string;
     tags: string; // 数据库中是JSON字符串
     proxy?: string;
@@ -217,13 +219,21 @@ export class ChromeManager {
     // 数据库迁移
     private migrateDatabase(): void {
         try {
-            // 检查 deletedAt 列是否存在
+            // 检查表结构信息
             const tableInfo = this.db.prepare("PRAGMA table_info(environments)").all() as Array<{name: string}>;
-            const hasDeletedAt = tableInfo.some(column => column.name === 'deletedAt');
             
+            // 检查 deletedAt 列是否存在
+            const hasDeletedAt = tableInfo.some(column => column.name === 'deletedAt');
             if (!hasDeletedAt) {
                 this.db.exec('ALTER TABLE environments ADD COLUMN deletedAt TEXT');
                 log.info('数据库已迁移：添加 deletedAt 列');
+            }
+            
+            // 检查 walletAddress 列是否存在
+            const hasWalletAddress = tableInfo.some(column => column.name === 'walletAddress');
+            if (!hasWalletAddress) {
+                this.db.exec('ALTER TABLE environments ADD COLUMN walletAddress TEXT');
+                log.info('数据库已迁移：添加 walletAddress 列');
             }
         } catch (error) {
             log.error('数据库迁移失败:', error);
@@ -319,7 +329,7 @@ export class ChromeManager {
     }
 
     // 创建新的Chrome环境
-    public async createEnvironment(name: string, groupName: string, notes: string = ''): Promise<ChromeEnvironment> {
+    public async createEnvironment(name: string, groupName: string, notes: string = '', walletAddress?: string): Promise<ChromeEnvironment> {
         try {
             // 生成唯一ID
             const id = uuidv4();
@@ -340,6 +350,7 @@ export class ChromeManager {
                 name,
                 groupName,
                 notes,
+                walletAddress,
                 dataDir,
                 tags: [],
                 createdAt: now,
@@ -350,8 +361,8 @@ export class ChromeManager {
             // 保存到数据库
             const stmt = this.db.prepare(`
         INSERT INTO environments 
-        (id, name, groupName, notes, dataDir, tags, createdAt, lastUsed) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        (id, name, groupName, notes, walletAddress, dataDir, tags, createdAt, lastUsed) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
             stmt.run(
@@ -359,6 +370,7 @@ export class ChromeManager {
                 env.name,
                 env.groupName,
                 env.notes,
+                env.walletAddress,
                 env.dataDir,
                 JSON.stringify(env.tags),
                 env.createdAt,

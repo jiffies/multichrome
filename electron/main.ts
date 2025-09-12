@@ -65,6 +65,9 @@ function createWindow() {
         minWidth: 1000, // 最小宽度
         minHeight: 600, // 最小高度
         show: false, // 先隐藏窗口，等加载完成后再显示
+        autoHideMenuBar: true, // 隐藏菜单栏
+        frame: true, // 保留窗口边框
+        titleBarStyle: 'default', // 使用默认标题栏样式
         webPreferences: {
             preload: path.join(__dirname, 'preload.cjs'),
             contextIsolation: true,
@@ -111,6 +114,8 @@ function createWindow() {
     // 页面加载完成后显示窗口
     mainWindow.once('ready-to-show', () => {
         mainWindow?.show();
+        // 确保菜单栏隐藏
+        mainWindow?.setMenuBarVisibility(false);
     });
 
     // 窗口关闭时清空引用
@@ -165,13 +170,14 @@ function setupIpcHandlers() {
     });
 
     // 创建新的Chrome环境
-    ipcMain.handle('create-chrome-environment', async (_, name: unknown, groupName: unknown, notes: unknown = '') => {
+    ipcMain.handle('create-chrome-environment', async (_, name: unknown, groupName: unknown, notes: unknown = '', walletAddress: unknown = '') => {
         try {
             const validName = validateString(name, '环境名称');
             const validGroupName = validateString(groupName, '分组名称');
             const validNotes = typeof notes === 'string' ? notes : '';
+            const validWalletAddress = typeof walletAddress === 'string' ? walletAddress : undefined;
             
-            return await chromeManager.createEnvironment(validName, validGroupName, validNotes);
+            return await chromeManager.createEnvironment(validName, validGroupName, validNotes, validWalletAddress);
         } catch (error) {
             log.error('创建Chrome环境失败:', error);
             throw error;
@@ -270,6 +276,7 @@ function setupIpcHandlers() {
             if ('name' in updateData) validData.name = validateString(updateData.name, '环境名称');
             if ('groupName' in updateData) validData.groupName = validateString(updateData.groupName, '分组名称');
             if ('notes' in updateData) validData.notes = typeof updateData.notes === 'string' ? updateData.notes : '';
+            if ('walletAddress' in updateData) validData.walletAddress = typeof updateData.walletAddress === 'string' ? updateData.walletAddress : undefined;
             if ('proxy' in updateData) validData.proxy = typeof updateData.proxy === 'string' ? updateData.proxy : undefined;
             if ('userAgent' in updateData) validData.userAgent = typeof updateData.userAgent === 'string' ? updateData.userAgent : undefined;
             
