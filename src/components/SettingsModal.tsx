@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, Box, FormControl, TextInput, Button, Text, Flash } from '@primer/react';
+import { Box, FormControl, TextInput, Button, Flash } from '@primer/react';
+import { Dialog } from '@primer/react/experimental';
 import { FileDirectoryIcon } from '@primer/octicons-react';
 
 interface SettingsModalProps {
@@ -80,73 +81,64 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         onCancel();
     };
 
-    if (!open) return null;
-
     return (
-        <Dialog
-            isOpen={open}
-            onDismiss={handleCancel}
-            aria-labelledby="settings-title"
-        >
-            <Dialog.Header id="settings-title">
-                程序设置
-            </Dialog.Header>
+        <>
+            {open && (
+                <Dialog
+                    title="程序设置"
+                    onClose={handleCancel}
+                    footerButtons={[
+                        {
+                            content: '取消',
+                            buttonType: 'default',
+                            onClick: handleCancel,
+                            disabled: loading
+                        },
+                        {
+                            content: loading ? '保存中...' : '保存',
+                            buttonType: 'primary',
+                            onClick: handleSave,
+                            disabled: loading
+                        }
+                    ]}
+                >
+            {error && (
+                <Flash variant="danger" sx={{ mb: 3 }}>
+                    {error}
+                </Flash>
+            )}
             
-            <Box p={3}>
-                {error && (
-                    <Flash variant="danger" sx={{ mb: 3 }}>
-                        {error}
-                    </Flash>
-                )}
-                
-                {success && (
-                    <Flash variant="success" sx={{ mb: 3 }}>
-                        {success}
-                    </Flash>
-                )}
+            {success && (
+                <Flash variant="success" sx={{ mb: 3 }}>
+                    {success}
+                </Flash>
+            )}
 
-                <FormControl required>
-                    <FormControl.Label>数据存储位置</FormControl.Label>
-                    <Box display="flex" alignItems="center" sx={{ gap: 2 }}>
-                        <Box flex={1}>
-                            <TextInput
-                                placeholder="选择文件夹路径"
-                                value={dataPath}
-                                onChange={(e) => setDataPath(e.target.value)}
-                            />
-                        </Box>
-                        <Button
-                            leadingIcon={FileDirectoryIcon}
-                            onClick={handleSelectFolder}
-                            variant="outline"
-                        >
-                            浏览
-                        </Button>
+            <FormControl required>
+                <FormControl.Label>数据存储位置</FormControl.Label>
+                <Box display="flex" alignItems="center" sx={{ gap: 2 }}>
+                    <Box flex={1}>
+                        <TextInput
+                            placeholder="选择文件夹路径"
+                            value={dataPath}
+                            onChange={(e) => setDataPath(e.target.value)}
+                        />
                     </Box>
-                    <FormControl.Caption>
-                        修改后需要重启应用才能生效，数据将被自动迁移到新位置
-                    </FormControl.Caption>
-                </FormControl>
-            </Box>
-
-            <Dialog.Footer>
-                <Box display="flex" justifyContent="flex-end" sx={{ gap: 2 }}>
-                    <Button 
-                        onClick={handleCancel}
-                        disabled={loading}
+                    <Button
+                        leadingIcon={FileDirectoryIcon}
+                        onClick={handleSelectFolder}
+                        variant="outline"
                     >
-                        取消
-                    </Button>
-                    <Button 
-                        variant="primary" 
-                        onClick={handleSave}
-                        disabled={loading}
-                    >
-                        {loading ? '保存中...' : '保存'}
+                        浏览
                     </Button>
                 </Box>
-            </Dialog.Footer>
-        </Dialog>
+                <FormControl.Caption>
+                    修改后需要重启应用才能生效，数据将被自动迁移到新位置
+                </FormControl.Caption>
+            </FormControl>
+                </Dialog>
+            )}
+        </>
     );
 };
 

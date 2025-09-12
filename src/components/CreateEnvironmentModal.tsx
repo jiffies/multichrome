@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Dialog, Box, FormControl, TextInput, Textarea, Button, Select } from '@primer/react';
+import { Box, FormControl, TextInput, Textarea, Button, Select } from '@primer/react';
+import { Dialog } from '@primer/react/experimental';
 
 interface CreateEnvironmentModalProps {
     open: boolean;
@@ -75,90 +76,81 @@ const CreateEnvironmentModal: React.FC<CreateEnvironmentModalProps> = ({
         onCancel();
     };
 
-    if (!open) return null;
-
     return (
-        <Dialog
-            isOpen={open}
-            onDismiss={handleCancel}
-            aria-labelledby="create-environment-title"
-        >
-            <Dialog.Header id="create-environment-title">
-                创建新的Chrome环境
-            </Dialog.Header>
-            
-            <Box p={3}>
-                <Box as="form" display="flex" flexDirection="column" sx={{ gap: 3 }}>
-                    <FormControl required>
-                        <FormControl.Label>环境名称</FormControl.Label>
-                        <TextInput
-                            placeholder="例如: 工作、个人、测试等"
-                            value={formData.name}
-                            onChange={(e) => setFormData({...formData, name: e.target.value})}
-                        />
-                        {errors.name && (
-                            <FormControl.Validation variant="error">
-                                {errors.name}
-                            </FormControl.Validation>
-                        )}
-                    </FormControl>
+        <>
+            {open && (
+                <Dialog
+                    title="创建新的Chrome环境"
+                    onClose={handleCancel}
+                    footerButtons={[
+                        {
+                            content: '取消',
+                            buttonType: 'default',
+                            onClick: handleCancel,
+                            disabled: loading
+                        },
+                        {
+                            content: loading ? '创建中...' : '创建',
+                            buttonType: 'primary',
+                            onClick: handleSubmit,
+                            disabled: loading
+                        }
+                    ]}
+                >
+            <Box as="form" display="flex" flexDirection="column" sx={{ gap: 3 }}>
+                <FormControl required>
+                    <FormControl.Label>环境名称</FormControl.Label>
+                    <TextInput
+                        placeholder="例如: 工作、个人、测试等"
+                        value={formData.name}
+                        onChange={(e) => setFormData({...formData, name: e.target.value})}
+                    />
+                    {errors.name && (
+                        <FormControl.Validation variant="error">
+                            {errors.name}
+                        </FormControl.Validation>
+                    )}
+                </FormControl>
 
-                    <FormControl required>
-                        <FormControl.Label>分组</FormControl.Label>
-                        <Select
-                            placeholder="选择或创建新分组"
-                            value={formData.groupName}
-                            onChange={(e) => setFormData({...formData, groupName: e.target.value})}
-                        >
-                            {groups.length > 0 ? (
-                                groups.map(group => (
-                                    <Select.Option key={group} value={group}>
-                                        {group}
-                                    </Select.Option>
-                                ))
-                            ) : (
-                                <Select.Option value="默认分组">
-                                    默认分组
+                <FormControl required>
+                    <FormControl.Label>分组</FormControl.Label>
+                    <Select
+                        placeholder="选择或创建新分组"
+                        value={formData.groupName}
+                        onChange={(e) => setFormData({...formData, groupName: e.target.value})}
+                    >
+                        {groups.length > 0 ? (
+                            groups.map(group => (
+                                <Select.Option key={group} value={group}>
+                                    {group}
                                 </Select.Option>
-                            )}
-                        </Select>
-                        {errors.groupName && (
-                            <FormControl.Validation variant="error">
-                                {errors.groupName}
-                            </FormControl.Validation>
+                            ))
+                        ) : (
+                            <Select.Option value="默认分组">
+                                默认分组
+                            </Select.Option>
                         )}
-                    </FormControl>
+                    </Select>
+                    {errors.groupName && (
+                        <FormControl.Validation variant="error">
+                            {errors.groupName}
+                        </FormControl.Validation>
+                    )}
+                </FormControl>
 
-                    <FormControl>
-                        <FormControl.Label>备注</FormControl.Label>
-                        <Textarea
-                            placeholder="可选的备注信息"
-                            rows={3}
-                            value={formData.notes}
-                            onChange={(e) => setFormData({...formData, notes: e.target.value})}
-                        />
-                    </FormControl>
+                <FormControl>
+                    <FormControl.Label>备注</FormControl.Label>
+                    <Textarea
+                        placeholder="可选的备注信息"
+                        rows={3}
+                        value={formData.notes}
+                        onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                    />
+                </FormControl>
                 </Box>
-            </Box>
-
-            <Dialog.Footer>
-                <Box display="flex" justifyContent="flex-end" sx={{ gap: 2 }}>
-                    <Button 
-                        onClick={handleCancel}
-                        disabled={loading}
-                    >
-                        取消
-                    </Button>
-                    <Button 
-                        variant="primary" 
-                        onClick={handleSubmit}
-                        disabled={loading}
-                    >
-                        {loading ? '创建中...' : '创建'}
-                    </Button>
-                </Box>
-            </Dialog.Footer>
-        </Dialog>
+                </Dialog>
+            )}
+        </>
     );
 };
 

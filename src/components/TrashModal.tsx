@@ -108,13 +108,15 @@ const TrashModal: React.FC<TrashModalProps> = ({
             title: '名称',
             dataIndex: 'name',
             key: 'name',
-            width: 200,
+            width: '20%',
+            minWidth: 150,
         },
         {
             title: '分组',
             dataIndex: 'groupName',
             key: 'groupName',
-            width: 120,
+            width: '12%',
+            minWidth: 100,
             render: (groupName: string) => (
                 <Tag color="blue">{groupName}</Tag>
             ),
@@ -123,7 +125,8 @@ const TrashModal: React.FC<TrashModalProps> = ({
             title: '删除时间',
             dataIndex: 'deletedAt',
             key: 'deletedAt',
-            width: 160,
+            width: '18%',
+            minWidth: 160,
             render: (deletedAt?: string) => {
                 if (!deletedAt) return '-';
                 return dayjs(deletedAt).format('YYYY-MM-DD HH:mm');
@@ -132,7 +135,8 @@ const TrashModal: React.FC<TrashModalProps> = ({
         {
             title: '删除时长',
             key: 'deleteAge',
-            width: 120,
+            width: '15%',
+            minWidth: 120,
             render: (_: unknown, record: ChromeEnvironment) => {
                 if (!record.deletedAt) return '-';
                 const days = dayjs().diff(dayjs(record.deletedAt), 'days');
@@ -150,11 +154,13 @@ const TrashModal: React.FC<TrashModalProps> = ({
             dataIndex: 'notes',
             key: 'notes',
             ellipsis: true,
+            // 不设置宽度，让它自动填充剩余空间
         },
         {
             title: '操作',
             key: 'actions',
-            width: 160,
+            width: 180,
+            fixed: 'right' as const,
             render: (_: unknown, record: ChromeEnvironment) => (
                 <Space size="small">
                     <Button
@@ -191,7 +197,8 @@ const TrashModal: React.FC<TrashModalProps> = ({
             title="回收站"
             open={open}
             onCancel={onCancel}
-            width={1000}
+            width="80%"
+            style={{ maxWidth: '1200px', minWidth: '800px' }}
             footer={[
                 <Button key="refresh" icon={<ReloadOutlined />} onClick={loadDeletedEnvironments}>
                     刷新
@@ -225,6 +232,7 @@ const TrashModal: React.FC<TrashModalProps> = ({
                     dataSource={deletedEnvironments}
                     rowKey="id"
                     loading={loading}
+                    scroll={{ x: 800 }}
                     pagination={{
                         pageSize: 10,
                         showSizeChanger: false,

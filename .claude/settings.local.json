@@ -17,7 +17,9 @@
       "Read(//d/chrome多开/**)",
       "Read(//c/Users/lcq/AppData/Roaming/multichrome/**)",
       "Bash(node:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(del:*)",
+      "Bash(powershell Remove-Item:*)"
     ],
     "deny": [],
     "ask": []
