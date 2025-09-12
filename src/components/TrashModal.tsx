@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { Modal, Table, Button, Space, Empty, Popconfirm, Tag, message } from 'antd';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Box, Button, Label, Text, Spinner, ActionMenu, ActionList } from '@primer/react';
+import { Dialog } from '@primer/react/experimental';
 import {
-    RollbackOutlined,
-    DeleteOutlined,
-    ClearOutlined,
-    ReloadOutlined
-} from '@ant-design/icons';
+    ReplyIcon,
+    TrashIcon,
+    SyncIcon,
+    XCircleIcon
+} from '@primer/octicons-react';
 import { ChromeEnvironment } from '../types';
 import { useErrorHandler } from '../hooks/useErrorHandler';
 import dayjs from 'dayjs';
@@ -26,7 +27,7 @@ const TrashModal: React.FC<TrashModalProps> = ({
     const { handleError } = useErrorHandler();
 
     // 加载已删除的环境
-    const loadDeletedEnvironments = async () => {
+    const loadDeletedEnvironments = useCallback(async () => {
         if (!window.electronAPI || !window.electronAPI.trash) {
             handleError(new Error('回收站API未正确加载'), '加载回收站');
             return;
@@ -41,7 +42,7 @@ const TrashModal: React.FC<TrashModalProps> = ({
         } finally {
             setLoading(false);
         }
-    };
+    }, [handleError]);
 
     // 恢复环境
     const handleRestore = async (id: string, name: string) => {
@@ -53,7 +54,10 @@ const TrashModal: React.FC<TrashModalProps> = ({
         try {
             const success = await window.electronAPI.trash.restore(id);
             if (success) {
-                message.success(`环境 "${name}" 已恢复`);
+                // 使用我们的通知系统
+                window.dispatchEvent(new CustomEvent('show-notification', {
+                    detail: { type: 'success', message: `环境 "${name}" 已恢复` }
+                }));
                 loadDeletedEnvironments();
                 onEnvironmentRestored?.();
             }
@@ -72,7 +76,9 @@ const TrashModal: React.FC<TrashModalProps> = ({
         try {
             const success = await window.electronAPI.trash.permanentlyDelete(id);
             if (success) {
-                message.success(`环境 "${name}" 已永久删除`);
+                window.dispatchEvent(new CustomEvent('show-notification', {
+                    detail: { type: 'success', message: `环境 "${name}" 已永久删除` }
+                }));
                 loadDeletedEnvironments();
             }
         } catch (err) {
@@ -89,7 +95,9 @@ const TrashModal: React.FC<TrashModalProps> = ({
         
         try {
             const count = await window.electronAPI.trash.cleanup();
-            message.success(`已清理 ${count} 个过期环境`);
+            window.dispatchEvent(new CustomEvent('show-notification', {
+                detail: { type: 'success', message: `已清理 ${count} 个过期环境` }
+            }));
             loadDeletedEnvironments();
         } catch (err) {
             handleError(err, '清空回收站');
@@ -101,147 +109,203 @@ const TrashModal: React.FC<TrashModalProps> = ({
         if (open) {
             loadDeletedEnvironments();
         }
-    }, [open]);
+    }, [open, loadDeletedEnvironments]);
 
-    const columns = [
-        {
-            title: '名称',
-            dataIndex: 'name',
-            key: 'name',
-            width: '20%',
-            minWidth: 150,
-        },
-        {
-            title: '分组',
-            dataIndex: 'groupName',
-            key: 'groupName',
-            width: '12%',
-            minWidth: 100,
-            render: (groupName: string) => (
-                <Tag color="blue">{groupName}</Tag>
-            ),
-        },
-        {
-            title: '删除时间',
-            dataIndex: 'deletedAt',
-            key: 'deletedAt',
-            width: '18%',
-            minWidth: 160,
-            render: (deletedAt?: string) => {
-                if (!deletedAt) return '-';
-                return dayjs(deletedAt).format('YYYY-MM-DD HH:mm');
-            },
-        },
-        {
-            title: '删除时长',
-            key: 'deleteAge',
-            width: '15%',
-            minWidth: 120,
-            render: (_: unknown, record: ChromeEnvironment) => {
-                if (!record.deletedAt) return '-';
-                const days = dayjs().diff(dayjs(record.deletedAt), 'days');
-                const isExpiring = days >= 25; // 30天后自动删除，25天时警告
-                return (
-                    <Tag color={isExpiring ? 'red' : 'default'}>
-                        {days} 天前
-                        {isExpiring && ' (即将过期)'}
-                    </Tag>
-                );
-            },
-        },
-        {
-            title: '备注',
-            dataIndex: 'notes',
-            key: 'notes',
-            ellipsis: true,
-            // 不设置宽度，让它自动填充剩余空间
-        },
-        {
-            title: '操作',
-            key: 'actions',
-            width: 180,
-            fixed: 'right' as const,
-            render: (_: unknown, record: ChromeEnvironment) => (
-                <Space size="small">
+    // 渲染单个已删除环境行
+    const renderDeletedEnvironmentRow = (env: ChromeEnvironment) => {
+        const days = env.deletedAt ? dayjs().diff(dayjs(env.deletedAt), 'days') : 0;
+        const isExpiring = days >= 25;
+        
+        return (
+            <Box key={env.id} 
+                 display="grid" 
+                 gridTemplateColumns="1fr 120px 160px 120px 2fr 180px" 
+                 gap={3} 
+                 py={3} 
+                 px={3} 
+                 borderBottom="1px solid" 
+                 borderColor="border.default"
+                 alignItems="center"
+                 sx={{ '&:hover': { bg: 'canvas.subtle' } }}
+            >
+                {/* 名称 */}
+                <Text fontSize="14px" fontWeight="600">{env.name}</Text>
+
+                {/* 分组 */}
+                <Label variant="primary" size="small">{env.groupName}</Label>
+
+                {/* 删除时间 */}
+                <Text fontSize="12px">
+                    {env.deletedAt ? dayjs(env.deletedAt).format('YYYY-MM-DD HH:mm') : '-'}
+                </Text>
+
+                {/* 删除时长 */}
+                <Label variant={isExpiring ? 'danger' : 'default'} size="small">
+                    {env.deletedAt ? `${days} 天前${isExpiring ? ' (即将过期)' : ''}` : '-'}
+                </Label>
+
+                {/* 备注 */}
+                <Text fontSize="12px" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {env.notes || '-'}
+                </Text>
+
+                {/* 操作 */}
+                <Box display="flex" gap={2}>
                     <Button
-                        type="primary"
+                        variant="primary"
                         size="small"
-                        icon={<RollbackOutlined />}
-                        onClick={() => handleRestore(record.id, record.name)}
+                        leadingIcon={ReplyIcon}
+                        onClick={() => handleRestore(env.id, env.name)}
                     >
                         恢复
                     </Button>
-                    <Popconfirm
-                        title="永久删除环境"
-                        description="此操作不可恢复，确定要永久删除这个环境吗？"
-                        onConfirm={() => handlePermanentlyDelete(record.id, record.name)}
-                        okText="确定"
-                        cancelText="取消"
-                        okType="danger"
-                    >
-                        <Button
-                            danger
-                            size="small"
-                            icon={<DeleteOutlined />}
-                        >
-                            永久删除
-                        </Button>
-                    </Popconfirm>
-                </Space>
-            ),
-        },
-    ];
+                    <ActionMenu>
+                        <ActionMenu.Anchor>
+                            <Button
+                                variant="danger"
+                                size="small"
+                                leadingIcon={TrashIcon}
+                            >
+                                永久删除
+                            </Button>
+                        </ActionMenu.Anchor>
+                        <ActionMenu.Overlay>
+                            <ActionList>
+                                <ActionList.Item
+                                    variant="danger"
+                                    onSelect={() => {
+                                        if (confirm(`确定要永久删除环境"${env.name}"吗？此操作不可恢复。`)) {
+                                            handlePermanentlyDelete(env.id, env.name);
+                                        }
+                                    }}
+                                >
+                                    <ActionList.LeadingVisual>
+                                        <TrashIcon />
+                                    </ActionList.LeadingVisual>
+                                    确认永久删除
+                                </ActionList.Item>
+                            </ActionList>
+                        </ActionMenu.Overlay>
+                    </ActionMenu>
+                </Box>
+            </Box>
+        );
+    };
 
     return (
-        <Modal
-            title="回收站"
-            open={open}
-            onCancel={onCancel}
-            width="80%"
-            style={{ maxWidth: '1200px', minWidth: '800px' }}
-            footer={[
-                <Button key="refresh" icon={<ReloadOutlined />} onClick={loadDeletedEnvironments}>
-                    刷新
-                </Button>,
-                <Popconfirm
-                    key="cleanup"
-                    title="清空回收站"
-                    description="将永久删除所有超过30天的环境，此操作不可恢复。"
-                    onConfirm={handleCleanup}
-                    okText="确定"
-                    cancelText="取消"
-                    okType="danger"
+        <>
+            {open && (
+                <Dialog
+                    title="回收站"
+                    onClose={onCancel}
+                    sx={{ width: '80%', maxWidth: '1200px', minWidth: '800px' }}
+                    footerButtons={[
+                        {
+                            content: '刷新',
+                            buttonType: 'default',
+                            leadingIcon: SyncIcon,
+                            onClick: loadDeletedEnvironments
+                        },
+                        {
+                            content: '清空回收站',
+                            buttonType: 'danger',
+                            leadingIcon: XCircleIcon,
+                            onClick: () => {
+                                if (confirm('将永久删除所有超过30天的环境，此操作不可恢复。确定要继续吗？')) {
+                                    handleCleanup();
+                                }
+                            }
+                        },
+                        {
+                            content: '关闭',
+                            buttonType: 'default',
+                            onClick: onCancel
+                        }
+                    ]}
                 >
-                    <Button danger icon={<ClearOutlined />}>
-                        清空回收站
-                    </Button>
-                </Popconfirm>,
-                <Button key="close" onClick={onCancel}>
-                    关闭
-                </Button>,
-            ]}
-        >
-            {deletedEnvironments.length === 0 && !loading ? (
-                <Empty
-                    description="回收站为空"
-                    image={Empty.PRESENTED_IMAGE_SIMPLE}
-                />
-            ) : (
-                <Table
-                    columns={columns}
-                    dataSource={deletedEnvironments}
-                    rowKey="id"
-                    loading={loading}
-                    scroll={{ x: 800 }}
-                    pagination={{
-                        pageSize: 10,
-                        showSizeChanger: false,
-                        showQuickJumper: true,
-                        showTotal: (total) => `共 ${total} 项`,
-                    }}
-                />
+                    {deletedEnvironments.length === 0 && !loading ? (
+                        <Box 
+                            display="flex" 
+                            flexDirection="column" 
+                            alignItems="center" 
+                            justifyContent="center" 
+                            py={8}
+                            textAlign="center"
+                        >
+                            <TrashIcon size={64} color="fg.muted" />
+                            <Text sx={{ mt: 3, fontSize: 2, color: 'fg.muted' }}>
+                                回收站为空
+                            </Text>
+                        </Box>
+                    ) : (
+                        <Box border="1px solid" borderColor="border.default" borderRadius={2} overflow="hidden">
+                            {/* 表头 */}
+                            <Box 
+                                display="grid" 
+                                gridTemplateColumns="1fr 120px 160px 120px 2fr 180px" 
+                                gap={3} 
+                                py={2} 
+                                px={3} 
+                                bg="canvas.subtle"
+                                borderBottom="1px solid"
+                                borderColor="border.default"
+                                fontWeight="600"
+                            >
+                                <Text fontSize="12px" color="fg.muted">名称</Text>
+                                <Text fontSize="12px" color="fg.muted">分组</Text>
+                                <Text fontSize="12px" color="fg.muted">删除时间</Text>
+                                <Text fontSize="12px" color="fg.muted">删除时长</Text>
+                                <Text fontSize="12px" color="fg.muted">备注</Text>
+                                <Text fontSize="12px" color="fg.muted">操作</Text>
+                            </Box>
+                            
+                            {/* 表格内容 */}
+                            <Box 
+                                maxHeight="400px" 
+                                overflow="auto"
+                                sx={{
+                                    '&::-webkit-scrollbar': {
+                                        width: '8px',
+                                        height: '8px',
+                                    },
+                                    '&::-webkit-scrollbar-track': {
+                                        background: 'canvas.default',
+                                    },
+                                    '&::-webkit-scrollbar-thumb': {
+                                        background: 'neutral.emphasis',
+                                        borderRadius: '4px',
+                                    },
+                                }}
+                            >
+                                {loading ? (
+                                    <Box display="flex" justifyContent="center" alignItems="center" py={8}>
+                                        <Spinner size="medium" />
+                                        <Text ml={2} color="fg.muted">加载中...</Text>
+                                    </Box>
+                                ) : (
+                                    deletedEnvironments.map(renderDeletedEnvironmentRow)
+                                )}
+                            </Box>
+                            
+                            {/* 分页信息 */}
+                            {!loading && deletedEnvironments.length > 0 && (
+                                <Box 
+                                    py={2} 
+                                    px={3} 
+                                    borderTop="1px solid" 
+                                    borderColor="border.default"
+                                    bg="canvas.subtle"
+                                >
+                                    <Text fontSize="12px" color="fg.muted">
+                                        共 {deletedEnvironments.length} 项
+                                    </Text>
+                                </Box>
+                            )}
+                        </Box>
+                    )}
+                </Dialog>
             )}
-        </Modal>
+        </>
     );
 };
 

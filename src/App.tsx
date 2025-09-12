@@ -1,6 +1,4 @@
 import React, { useState } from 'react';
-import { ConfigProvider, App as AntApp } from 'antd';
-import zhCN from 'antd/locale/zh_CN';
 import { ThemeProvider, BaseStyles, Box } from '@primer/react';
 import '@primer/primitives/dist/css/functional/themes/light.css';
 import Header from './components/Header';
@@ -13,6 +11,7 @@ import ResponsiveLayout from './components/ResponsiveLayout';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { EnvironmentProvider, useEnvironment } from './contexts/EnvironmentContext';
 import { SettingsProvider, useSettings } from './contexts/SettingsContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 
 // 主应用内容组件（使用上下文）
 const AppContent: React.FC = () => {
@@ -83,20 +82,16 @@ const AppContent: React.FC = () => {
                     />
                 }
                 content={
-                    <ConfigProvider locale={zhCN}>
-                        <AntApp>
-                            <Box p={3} height="100%" overflow="hidden" display="flex" flexDirection="column">
-                                <EnvironmentList
-                                    environments={filteredEnvironments}
-                                    loading={state.loading}
-                                    onLaunch={handleLaunchEnvironment}
-                                    onClose={handleCloseEnvironment}
-                                    onDelete={handleDeleteEnvironment}
-                                    onRefresh={actions.refreshEnvironments}
-                                />
-                            </Box>
-                        </AntApp>
-                    </ConfigProvider>
+                    <Box p={3} height="100%" overflow="hidden" display="flex" flexDirection="column">
+                        <EnvironmentList
+                            environments={filteredEnvironments}
+                            loading={state.loading}
+                            onLaunch={handleLaunchEnvironment}
+                            onClose={handleCloseEnvironment}
+                            onDelete={handleDeleteEnvironment}
+                            onRefresh={actions.refreshEnvironments}
+                        />
+                    </Box>
                 }
             />
 
@@ -129,11 +124,13 @@ const App: React.FC = () => {
         <ErrorBoundary>
             <ThemeProvider>
                 <BaseStyles sx={{ height: '100%', width: '100%', overflow: 'hidden' }}>
-                    <EnvironmentProvider>
-                        <SettingsProvider>
-                            <AppContent />
-                        </SettingsProvider>
-                    </EnvironmentProvider>
+                    <NotificationProvider>
+                        <EnvironmentProvider>
+                            <SettingsProvider>
+                                <AppContent />
+                            </SettingsProvider>
+                        </EnvironmentProvider>
+                    </NotificationProvider>
                 </BaseStyles>
             </ThemeProvider>
         </ErrorBoundary>

@@ -19,7 +19,8 @@
       "Bash(node:*)",
       "WebSearch",
       "Bash(del:*)",
-      "Bash(powershell Remove-Item:*)"
+      "Bash(powershell Remove-Item:*)",
+      "Bash(npm run lint)"
     ],
     "deny": [],
     "ask": []

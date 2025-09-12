@@ -30,7 +30,6 @@
         "@primer/primitives": "^11.1.0",
         "@primer/react": "^37.31.0",
         "@tailwindcss/vite": "^4.0.15",
-        "antd": "^5.12.5",
         "better-sqlite3": "^9.2.2",
         "dayjs": "^1.11.13",
         "electron-log": "^5.0.1",

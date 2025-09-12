@@ -5,7 +5,6 @@ import {
     FileDirectoryIcon, 
     TrashIcon, 
     GearIcon, 
-    InboxIcon,
     XIcon
 } from '@primer/octicons-react';
 
@@ -141,7 +140,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                         确认删除分组
                     </Dialog.Header>
                     <Box p={3}>
-                        确定要删除分组 "{deleteConfirmOpen}" 吗？
+                        确定要删除分组 &quot;{deleteConfirmOpen}&quot; 吗？
                     </Box>
                     <Dialog.Footer>
                         <Box display="flex" justifyContent="flex-end" sx={{ gap: 2 }}>

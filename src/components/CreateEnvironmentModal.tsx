@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Box, FormControl, TextInput, Textarea, Button, Select } from '@primer/react';
+import { Box, FormControl, TextInput, Textarea, Select } from '@primer/react';
 import { Dialog } from '@primer/react/experimental';
 
 interface CreateEnvironmentModalProps {

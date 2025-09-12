@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { Table, Tooltip } from 'antd';
-import { Box, Heading, Button, Label, Text } from '@primer/react';
+import { Box, Heading, Button, Label, Text, Tooltip, Spinner } from '@primer/react';
 import {
     PlayIcon,
     StopIcon,
@@ -56,7 +55,7 @@ const EnvironmentList: React.FC<EnvironmentListProps> = ({
                     </Box>
                     <Heading as="h3" sx={{ fontSize: 2, mb: 2 }}>没有Chrome环境</Heading>
                     <Text sx={{ mb: 4, color: 'fg.muted' }}>
-                        点击右上角的"新建窗口"按钮创建你的第一个Chrome环境
+                        点击右上角的&quot;新建窗口&quot;按钮创建你的第一个Chrome环境
                     </Text>
                     <Button variant="primary" leadingIcon={SyncIcon} onClick={onRefresh}>
                         刷新
@@ -66,121 +65,101 @@ const EnvironmentList: React.FC<EnvironmentListProps> = ({
         );
     }
 
-    const columns = [
-        {
-            title: '状态',
-            key: 'status',
-            width: 80,
-            fixed: 'left' as const,
-            render: (_: any, record: ChromeEnvironment) => (
-                <Label variant={record.isRunning ? 'success' : 'default'}>
-                    {record.isRunning ? '运行' : '停止'}
-                </Label>
-            )
-        },
-        {
-            title: 'ID',
-            dataIndex: 'id',
-            key: 'id',
-            width: 100,
-            render: (id: string) => id.substring(0, 8)
-        },
-        {
-            title: '缓存目录',
-            dataIndex: 'dataDir',
-            key: 'dataDir',
-            width: 180,
-            ellipsis: true,
-            render: (dataDir: string) => (
-                <Tooltip title={dataDir}>
-                    <span>{dataDir.split(/[/\\]/).pop()}</span>
-                </Tooltip>
-            )
-        },
-        {
-            title: '分组',
-            dataIndex: 'groupName',
-            key: 'groupName',
-            width: 120
-        },
-        {
-            title: '名称',
-            dataIndex: 'name',
-            key: 'name',
-            width: 200,
-            ellipsis: true
-        },
-        {
-            title: '备注',
-            dataIndex: 'notes',
-            key: 'notes',
-            width: 250,
-            ellipsis: true
-        },
-        {
-            title: '标签',
-            key: 'tags',
-            dataIndex: 'tags',
-            width: 200,
-            render: (tags: string[]) => (
-                <Box>
-                    {tags.map(tag => (
-                        <Label key={tag} sx={{ mr: 1 }}>{tag}</Label>
-                    ))}
-                </Box>
-            )
-        },
-        {
-            title: '代理',
-            dataIndex: 'proxy',
-            key: 'proxy',
-            width: 180,
-            ellipsis: true,
-            render: (proxy?: string) => proxy || '-'
-        },
-        {
-            title: '上次使用',
-            dataIndex: 'lastUsed',
-            key: 'lastUsed',
-            width: 130,
-            render: (lastUsed: string) => dayjs(lastUsed).format('MM-DD HH:mm')
-        },
-        {
-            title: '操作',
-            key: 'action',
-            width: 160,
-            fixed: 'right' as const,
-            render: (_: any, record: ChromeEnvironment) => (
-                <Box display="flex" sx={{ gap: 1 }}>
-                    {record.isRunning ? (
-                        <Button
-                            leadingIcon={StopIcon}
-                            variant="outline"
-                            size="small"
-                            onClick={() => onClose(record.id)}
-                        >
-                            <Box as="span" sx={{ display: ['none', 'inline'] }}>关闭</Box>
-                        </Button>
-                    ) : (
-                        <Button
-                            leadingIcon={PlayIcon}
-                            variant="primary"
-                            size="small"
-                            onClick={() => onLaunch(record.id)}
-                        >
-                            <Box as="span" sx={{ display: ['none', 'inline'] }}>打开</Box>
-                        </Button>
-                    )}
+    // 渲染单个环境行
+    const renderEnvironmentRow = (env: ChromeEnvironment) => (
+        <Box key={env.id} 
+             display="grid" 
+             gridTemplateColumns="80px 100px 180px 120px 200px 250px 200px 180px 130px 160px" 
+             gap={2} 
+             py={2} 
+             px={3} 
+             borderBottom="1px solid" 
+             borderColor="border.default"
+             alignItems="center"
+             sx={{ '&:hover': { bg: 'canvas.subtle' } }}
+        >
+            {/* 状态 */}
+            <Label variant={env.isRunning ? 'success' : 'default'} size="small">
+                {env.isRunning ? '运行' : '停止'}
+            </Label>
+
+            {/* ID */}
+            <Text fontSize="12px" fontFamily="mono">{env.id.substring(0, 8)}</Text>
+
+            {/* 缓存目录 */}
+            <Tooltip text={env.dataDir}>
+                <button style={{ 
+                    border: 'none', 
+                    background: 'transparent', 
+                    padding: 0, 
+                    cursor: 'default',
+                    textAlign: 'left',
+                    width: '100%'
+                }}>
+                    <Text fontSize="12px" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {env.dataDir.split(/[/\\]/).pop()}
+                    </Text>
+                </button>
+            </Tooltip>
+
+            {/* 分组 */}
+            <Text fontSize="12px">{env.groupName}</Text>
+
+            {/* 名称 */}
+            <Text fontSize="12px" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {env.name}
+            </Text>
+
+            {/* 备注 */}
+            <Text fontSize="12px" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {env.notes}
+            </Text>
+
+            {/* 标签 */}
+            <Box>
+                {env.tags.map(tag => (
+                    <Label key={tag} size="small" sx={{ mr: 1 }}>{tag}</Label>
+                ))}
+            </Box>
+
+            {/* 代理 */}
+            <Text fontSize="12px" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {env.proxy || '-'}
+            </Text>
+
+            {/* 上次使用 */}
+            <Text fontSize="12px">{dayjs(env.lastUsed).format('MM-DD HH:mm')}</Text>
+
+            {/* 操作 */}
+            <Box display="flex" gap={1}>
+                {env.isRunning ? (
                     <Button
-                        leadingIcon={TrashIcon}
-                        variant="danger"
+                        leadingIcon={StopIcon}
+                        variant="outline"
                         size="small"
-                        onClick={() => onDelete(record.id)}
-                    />
-                </Box>
-            )
-        }
-    ];
+                        onClick={() => onClose(env.id)}
+                    >
+                        <Box as="span" sx={{ display: ['none', 'inline'] }}>关闭</Box>
+                    </Button>
+                ) : (
+                    <Button
+                        leadingIcon={PlayIcon}
+                        variant="primary"
+                        size="small"
+                        onClick={() => onLaunch(env.id)}
+                    >
+                        <Box as="span" sx={{ display: ['none', 'inline'] }}>打开</Box>
+                    </Button>
+                )}
+                <Button
+                    leadingIcon={TrashIcon}
+                    variant="danger"
+                    size="small"
+                    onClick={() => onDelete(env.id)}
+                />
+            </Box>
+        </Box>
+    );
 
     return (
         <Box height="100%" display="flex" flexDirection="column">
@@ -195,19 +174,58 @@ const EnvironmentList: React.FC<EnvironmentListProps> = ({
                 </Button>
             </Box>
 
-            <Box flex={1}>
-                <Table
-                    columns={columns}
-                    dataSource={environments}
-                    rowKey="id"
-                    loading={loading}
-                    pagination={false}
-                    size="middle"
-                    scroll={{ 
-                        y: tableHeight,
-                        x: 'max-content'
+            <Box flex={1} border="1px solid" borderColor="border.default" borderRadius={2} overflow="hidden">
+                {/* 表头 */}
+                <Box 
+                    display="grid" 
+                    gridTemplateColumns="80px 100px 180px 120px 200px 250px 200px 180px 130px 160px" 
+                    gap={2} 
+                    py={2} 
+                    px={3} 
+                    bg="canvas.subtle"
+                    borderBottom="1px solid"
+                    borderColor="border.default"
+                    fontWeight="600"
+                >
+                    <Text fontSize="12px" color="fg.muted">状态</Text>
+                    <Text fontSize="12px" color="fg.muted">ID</Text>
+                    <Text fontSize="12px" color="fg.muted">缓存目录</Text>
+                    <Text fontSize="12px" color="fg.muted">分组</Text>
+                    <Text fontSize="12px" color="fg.muted">名称</Text>
+                    <Text fontSize="12px" color="fg.muted">备注</Text>
+                    <Text fontSize="12px" color="fg.muted">标签</Text>
+                    <Text fontSize="12px" color="fg.muted">代理</Text>
+                    <Text fontSize="12px" color="fg.muted">上次使用</Text>
+                    <Text fontSize="12px" color="fg.muted">操作</Text>
+                </Box>
+                
+                {/* 表格内容 */}
+                <Box 
+                    maxHeight={tableHeight} 
+                    overflow="auto"
+                    sx={{
+                        '&::-webkit-scrollbar': {
+                            width: '8px',
+                            height: '8px',
+                        },
+                        '&::-webkit-scrollbar-track': {
+                            background: 'canvas.default',
+                        },
+                        '&::-webkit-scrollbar-thumb': {
+                            background: 'neutral.emphasis',
+                            borderRadius: '4px',
+                        },
                     }}
-                />
+                >
+                    {loading ? (
+                        <Box display="flex" justifyContent="center" alignItems="center" py={8}>
+                            <Spinner size="medium" />
+                            <Text ml={2} color="fg.muted">加载中...</Text>
+                        </Box>
+                    ) : (
+                        environments.map(renderEnvironmentRow)
+                    )}
+                </Box>
             </Box>
         </Box>
     );
