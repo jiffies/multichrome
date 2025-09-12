@@ -1,4 +1,4 @@
-import { spawn, ChildProcess, execSync } from 'child_process';
+import { spawn, ChildProcess, execSync, exec } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
@@ -56,6 +56,7 @@ export class ChromeManager {
     private appDataPath: string;
     private statusCheckInterval: NodeJS.Timeout | null = null;
     private mainWindow: BrowserWindow | null = null;
+    private isChecking: boolean = false;
 
     constructor() {
         // 初始化设置管理器
@@ -112,31 +113,43 @@ export class ChromeManager {
 
     // 启动状态监控
     private startStatusMonitoring(): void {
-        // 每5秒检查一次进程状态
+        // 使用2秒检查频率，配合异步执行避免界面阻塞
         this.statusCheckInterval = setInterval(() => {
             this.checkProcessStatus();
-        }, 5000);
+        }, 2000);
     }
 
     // 检查进程状态
     private async checkProcessStatus(): Promise<void> {
-        try {
-            let statusChanged = false;
-            const idsToRemove: string[] = [];
+        // 如果正在检查中，跳过这次检查避免重复
+        if (this.isChecking) {
+            return;
+        }
 
+        // 如果没有运行中的进程，跳过检查
+        if (this.runningProcesses.size === 0) {
+            return;
+        }
+
+        this.isChecking = true;
+
+        try {
             log.debug(`检查进程状态: 当前运行中进程数量=${this.runningProcesses.size}`);
 
-            // 检查每个运行中的进程
+            // 使用一条PowerShell命令查询所有Chrome进程
+            const runningEnvIds = await this.checkAllChromeProcesses();
+            
+            // 检查哪些环境进程已结束
+            const endedIds: string[] = [];
             for (const [id, processInfo] of this.runningProcesses.entries()) {
                 const dataDir = (processInfo as any).dataDir;
                 if (!dataDir) continue;
-
-                // 使用PowerShell命令直接检查进程是否存在
-                const isRunning = await this.checkChromeProcessByDataDir(dataDir);
+                
+                const envId = path.basename(dataDir);
+                const isRunning = runningEnvIds.includes(envId);
                 
                 if (!isRunning) {
-                    idsToRemove.push(id);
-                    statusChanged = true;
+                    endedIds.push(id);
                     log.info(`检测到Chrome环境进程已结束: ID=${id}, DataDir=${dataDir}`);
                 } else {
                     log.debug(`Chrome进程正在运行: ID=${id}, DataDir=${dataDir}`);
@@ -144,17 +157,19 @@ export class ChromeManager {
             }
 
             // 移除已结束的进程
-            idsToRemove.forEach(id => {
+            endedIds.forEach(id => {
                 this.runningProcesses.delete(id);
             });
 
             // 如果状态发生变化，通知前端
-            if (statusChanged && this.mainWindow && !this.mainWindow.isDestroyed()) {
-                log.info(`进程状态发生变化，通知前端更新: 变化数量=${idsToRemove.length}`);
+            if (endedIds.length > 0 && this.mainWindow && !this.mainWindow.isDestroyed()) {
+                log.info(`进程状态发生变化，通知前端更新: 变化数量=${endedIds.length}`);
                 this.mainWindow.webContents.send('chrome-status-changed');
             }
         } catch (error) {
             log.error('检查进程状态失败:', error);
+        } finally {
+            this.isChecking = false;
         }
     }
 
@@ -716,27 +731,52 @@ export class ChromeManager {
         });
     }
 
-    // 简单检查Chrome进程是否存在
-    private async checkChromeProcessByDataDir(dataDir: string): Promise<boolean> {
+    // 使用一条PowerShell命令查询所有运行中的Chrome环境ID
+    private async checkAllChromeProcesses(): Promise<string[]> {
         try {
             if (process.platform === 'win32') {
-                const normalizedDataDir = dataDir.replace(/\\/g, '\\');
-                const command = `powershell "Get-WmiObject -Class Win32_Process -Filter \\"Name='chrome.exe'\\" | Where-Object { $_.CommandLine -like '*${normalizedDataDir}*' } | Select-Object ProcessId | Format-Table -HideTableHeaders"`;
-                
-                const output = execSync(command, { 
-                    encoding: 'utf8', 
-                    timeout: 5000,
-                    windowsHide: true
+                return new Promise((resolve) => {
+                    // 一次性获取所有Chrome进程的命令行，然后提取环境ID
+                    const command = `powershell "Get-CimInstance -ClassName Win32_Process -Filter \\"Name='chrome.exe'\\" | Select-Object CommandLine | ForEach-Object { $_.CommandLine }"`;
+                    
+                    log.debug(`执行统一进程检查命令: ${command}`);
+                    
+                    exec(command, { 
+                        encoding: 'utf8',
+                        timeout: 8000,
+                        windowsHide: true
+                    }, (error, stdout) => {
+                        if (error) {
+                            log.debug(`统一检查Chrome进程失败:`, error.message);
+                            resolve([]);
+                            return;
+                        }
+                        
+                        // 从命令行参数中提取环境ID
+                        const envIds: string[] = [];
+                        const lines = stdout.split('\n');
+                        
+                        for (const line of lines) {
+                            const trimmed = line.trim();
+                            if (trimmed.includes('--user-data-dir=') && trimmed.includes('environments')) {
+                                // 匹配 --user-data-dir=D:\chrome多开\environments\xxxxxxxx 格式
+                                const match = trimmed.match(/--user-data-dir=.*?environments[\\\/]([a-f0-9]{8})/);
+                                if (match && match[1]) {
+                                    envIds.push(match[1]);
+                                }
+                            }
+                        }
+                        
+                        const uniqueEnvIds = [...new Set(envIds)]; // 去重
+                        log.debug(`统一进程检查结果: 找到${uniqueEnvIds.length}个运行中的环境: [${uniqueEnvIds.join(', ')}]`);
+                        resolve(uniqueEnvIds);
+                    });
                 });
-                
-                // 检查是否有PID输出
-                const lines = output.split('\n').map(line => line.trim()).filter(line => line && !isNaN(Number(line)));
-                return lines.length > 0;
             }
-            return false;
+            return [];
         } catch (error) {
-            log.debug(`检查Chrome进程失败: ${dataDir}`, error);
-            return false;
+            log.debug(`统一检查Chrome进程失败:`, error);
+            return [];
         }
     }
 
