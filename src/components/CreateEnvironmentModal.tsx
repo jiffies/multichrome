@@ -18,7 +18,7 @@ const CreateEnvironmentModal: React.FC<CreateEnvironmentModalProps> = ({
     const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState({
         name: '',
-        groupName: groups.length > 0 ? groups[0] : '默认分组',
+        groupName: '',
         notes: ''
     });
     const [errors, setErrors] = useState<{[key: string]: string}>({});
@@ -54,7 +54,7 @@ const CreateEnvironmentModal: React.FC<CreateEnvironmentModalProps> = ({
             // 重置表单
             setFormData({
                 name: '',
-                groupName: groups.length > 0 ? groups[0] : '默认分组',
+                groupName: '',
                 notes: ''
             });
             setErrors({});
@@ -69,7 +69,7 @@ const CreateEnvironmentModal: React.FC<CreateEnvironmentModalProps> = ({
     const handleCancel = () => {
         setFormData({
             name: '',
-            groupName: groups.length > 0 ? groups[0] : '默认分组',
+            groupName: '',
             notes: ''
         });
         setErrors({});
@@ -114,23 +114,17 @@ const CreateEnvironmentModal: React.FC<CreateEnvironmentModalProps> = ({
 
                 <FormControl required>
                     <FormControl.Label>分组</FormControl.Label>
-                    <Select
-                        placeholder="选择或创建新分组"
+                    <TextInput
+                        placeholder="输入分组名称，如不存在将自动创建"
                         value={formData.groupName}
                         onChange={(e) => setFormData({...formData, groupName: e.target.value})}
-                    >
-                        {groups.length > 0 ? (
-                            groups.map(group => (
-                                <Select.Option key={group} value={group}>
-                                    {group}
-                                </Select.Option>
-                            ))
-                        ) : (
-                            <Select.Option value="默认分组">
-                                默认分组
-                            </Select.Option>
-                        )}
-                    </Select>
+                        list="group-suggestions"
+                    />
+                    <datalist id="group-suggestions">
+                        {groups.map(group => (
+                            <option key={group} value={group} />
+                        ))}
+                    </datalist>
                     {errors.groupName && (
                         <FormControl.Validation variant="error">
                             {errors.groupName}

@@ -20,6 +20,7 @@ const AppContent: React.FC = () => {
     const [createModalOpen, setCreateModalOpen] = useState<boolean>(false);
     const [settingsModalOpen, setSettingsModalOpen] = useState<boolean>(false);
     const [trashModalOpen, setTrashModalOpen] = useState<boolean>(false);
+    const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
 
 
 
@@ -53,16 +54,15 @@ const AppContent: React.FC = () => {
     };
 
     // 过滤环境列表
-    const filteredEnvironments = state.currentGroup === '全部'
+    const filteredEnvironments = state.currentGroup === '用户分组'
         ? state.environments
         : state.environments.filter(env => env.groupName === state.currentGroup);
 
     // 获取所有环境分组
-    const groups = ['全部', ...new Set(state.environments.map(env => env.groupName).filter(g => g))];
+    const groups = [...new Set(state.environments.map(env => env.groupName).filter(g => g))];
     
     // 确保有分组可用
-    const availableGroups = groups.filter(g => g !== '全部');
-    const groupsForModal = availableGroups.length > 0 ? availableGroups : ['默认分组'];
+    const groupsForModal = groups.length > 0 ? groups : ['默认分组'];
 
     return (
         <>
@@ -79,6 +79,8 @@ const AppContent: React.FC = () => {
                         emptyGroups={state.emptyGroups}
                         onSettingsClick={() => setSettingsModalOpen(true)}
                         onTrashClick={() => setTrashModalOpen(true)}
+                        collapsed={sidebarCollapsed}
+                        onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
                     />
                 }
                 content={
@@ -90,9 +92,12 @@ const AppContent: React.FC = () => {
                             onClose={handleCloseEnvironment}
                             onDelete={handleDeleteEnvironment}
                             onRefresh={actions.refreshEnvironments}
+                            onUpdateEnvironment={actions.updateEnvironment}
                         />
                     </Box>
                 }
+                sidebarCollapsed={sidebarCollapsed}
+                onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
             />
 
             <CreateEnvironmentModal

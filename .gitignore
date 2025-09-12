@@ -71,4 +71,7 @@ ehthumbs.db
 Desktop.ini
 $RECYCLE.BIN/
 
+.claude
+.claude/*
+
 image

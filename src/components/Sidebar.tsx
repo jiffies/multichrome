@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
-import { Box, NavList, IconButton, Tooltip, Dialog, Button } from '@primer/react';
+import { Box, IconButton, Tooltip, Dialog, Button, TreeView } from '@primer/react';
 import { 
     AppsIcon, 
     FileDirectoryIcon, 
     TrashIcon, 
     GearIcon, 
-    XIcon
+    XIcon,
+    ChevronLeftIcon,
+    ChevronRightIcon,
+    FoldIcon
 } from '@primer/octicons-react';
 
 interface SidebarProps {
@@ -17,6 +20,7 @@ interface SidebarProps {
     onSettingsClick?: () => void; // 设置点击回调
     onTrashClick?: () => void; // 回收站点击回调
     collapsed?: boolean; // 是否折叠
+    onToggleCollapse?: () => void; // 切换折叠状态
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ 
@@ -27,7 +31,8 @@ const Sidebar: React.FC<SidebarProps> = ({
     emptyGroups = [],
     onSettingsClick,
     onTrashClick,
-    collapsed = false
+    collapsed = false,
+    onToggleCollapse
 }) => {
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState<string | null>(null);
 
@@ -40,93 +45,128 @@ const Sidebar: React.FC<SidebarProps> = ({
 
     return (
         <>
-            <Box as="aside" height="100%" backgroundColor="canvas.default" display="flex" flexDirection="column">
-                {/* 主导航区域 */}
-                <Box flex="1" overflowY="auto">
-                    <NavList>
-                        <NavList.Item 
-                            href="#" 
-                            aria-current={currentGroup === '全部' ? 'page' : undefined}
-                            onClick={(e) => {
-                                e.preventDefault();
-                                onSelectGroup('全部');
-                            }}
-                        >
-                            <NavList.LeadingVisual>
-                                <AppsIcon />
-                            </NavList.LeadingVisual>
-                            {!collapsed && '全部'}
-                        </NavList.Item>
-
-                        {groups
-                            .filter(group => group !== '全部')
-                            .map(group => (
-                                <NavList.Item
-                                    key={group}
-                                    href="#"
-                                    aria-current={currentGroup === group ? 'page' : undefined}
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        onSelectGroup(group);
-                                    }}
-                                >
-                                    <NavList.LeadingVisual>
-                                        <FileDirectoryIcon />
-                                    </NavList.LeadingVisual>
-                                    {!collapsed && (
-                                        <Box display="flex" justifyContent="space-between" alignItems="center" width="100%">
-                                            <Box>{group}</Box>
-                                            {emptyGroups.includes(group) && onDeleteGroup && (
-                                                <Tooltip aria-label="删除空分组">
-                                                    <IconButton
-                                                        aria-label="删除分组"
-                                                        icon={XIcon}
-                                                        variant="invisible"
-                                                        size="small"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setDeleteConfirmOpen(group);
-                                                        }}
-                                                    />
-                                                </Tooltip>
-                                            )}
-                                        </Box>
-                                    )}
-                                </NavList.Item>
-                            ))
-                        }
-                    </NavList>
+            <Box 
+                as="aside" 
+                height="100%" 
+                backgroundColor="canvas.default" 
+                display="flex" 
+                flexDirection="column"
+                width={collapsed ? '60px' : '250px'}
+                transition="width 0.2s ease"
+                borderRight="1px solid"
+                borderColor="border.default"
+            >
+                {/* 顶部折叠按钮 */}
+                <Box p={2} borderBottom="1px solid" borderColor="border.default">
+                    <Box display="flex" alignItems="center" justifyContent={collapsed ? 'center' : 'space-between'}>
+                        {!collapsed && (
+                            <Box fontSize="14px" fontWeight="600" color="fg.default">
+                                导航
+                            </Box>
+                        )}
+                        <Tooltip aria-label={collapsed ? '展开侧边栏' : '收起侧边栏'}>
+                            <IconButton
+                                aria-label={collapsed ? '展开侧边栏' : '收起侧边栏'}
+                                icon={collapsed ? ChevronRightIcon : ChevronLeftIcon}
+                                variant="invisible"
+                                onClick={onToggleCollapse}
+                                size="small"
+                            />
+                        </Tooltip>
+                    </Box>
                 </Box>
 
-                {/* 底部操作区域 */}
-                <Box borderTop="1px solid" borderColor="border.default" pt={2}>
-                    <NavList>
-                        <NavList.Item 
-                            href="#"
-                            onClick={(e) => {
-                                e.preventDefault();
-                                onTrashClick?.();
-                            }}
-                        >
-                            <NavList.LeadingVisual>
-                                <TrashIcon />
-                            </NavList.LeadingVisual>
-                            {!collapsed && '回收站'}
-                        </NavList.Item>
+                {/* 主导航区域 */}
+                <Box flex="1" overflowY="auto" p={collapsed ? 1 : 2}>
+                    {collapsed ? (
+                        // 折叠状态的简化视图
+                        <Box display="flex" flexDirection="column" sx={{ gap: 1 }}>
+                            {groups.filter(g => g !== '全部').map(group => (
+                                <Tooltip key={group} aria-label={group} side="right">
+                                    <IconButton
+                                        aria-label={group}
+                                        icon={FileDirectoryIcon}
+                                        variant={currentGroup === group ? 'default' : 'invisible'}
+                                        onClick={() => onSelectGroup(group)}
+                                        size="medium"
+                                        sx={{ width: '100%' }}
+                                    />
+                                </Tooltip>
+                            ))}
+                        </Box>
+                    ) : (
+                        // 展开状态的TreeView
+                        <TreeView aria-label="分组导航">
+                            {groups.filter(g => g !== '全部').length > 0 && (
+                                <TreeView.Item 
+                                    id="groups" 
+                                    defaultExpanded
+                                    current={currentGroup === '用户分组'}
+                                    onSelect={() => onSelectGroup('用户分组')}
+                                >
+                                    <TreeView.LeadingVisual>
+                                        <FoldIcon />
+                                    </TreeView.LeadingVisual>
+                                    用户分组
+                                    <TreeView.SubTree>
+                                        {groups.filter(g => g !== '全部').map(group => (
+                                            <TreeView.Item 
+                                                key={group}
+                                                id={group}
+                                                current={currentGroup === group}
+                                                onSelect={() => onSelectGroup(group)}
+                                            >
+                                                <TreeView.LeadingVisual>
+                                                    <FileDirectoryIcon />
+                                                </TreeView.LeadingVisual>
+                                                {group}
+                                                {emptyGroups.includes(group) && (
+                                                    <TreeView.TrailingVisual>
+                                                        <Tooltip aria-label="删除空分组">
+                                                            <IconButton
+                                                                aria-label={`删除分组 ${group}`}
+                                                                icon={XIcon}
+                                                                size="small"
+                                                                variant="invisible"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setDeleteConfirmOpen(group);
+                                                                }}
+                                                            />
+                                                        </Tooltip>
+                                                    </TreeView.TrailingVisual>
+                                                )}
+                                            </TreeView.Item>
+                                        ))}
+                                    </TreeView.SubTree>
+                                </TreeView.Item>
+                            )}
+                        </TreeView>
+                    )}
+                </Box>
 
-                        <NavList.Item 
-                            href="#"
-                            onClick={(e) => {
-                                e.preventDefault();
-                                onSettingsClick?.();
-                            }}
-                        >
-                            <NavList.LeadingVisual>
-                                <GearIcon />
-                            </NavList.LeadingVisual>
-                            {!collapsed && '设置'}
-                        </NavList.Item>
-                    </NavList>
+                {/* 底部工具栏 */}
+                <Box p={2} borderTop="1px solid" borderColor="border.default">
+                    <Box display="flex" flexDirection={collapsed ? 'column' : 'row'} sx={{ gap: 1 }} justifyContent={collapsed ? 'center' : 'flex-start'}>
+                        <Tooltip aria-label="回收站" side={collapsed ? 'right' : 'top'}>
+                            <IconButton
+                                aria-label="回收站"
+                                icon={TrashIcon}
+                                variant="invisible"
+                                onClick={onTrashClick}
+                                size="medium"
+                            />
+                        </Tooltip>
+                        <Tooltip aria-label="设置" side={collapsed ? 'right' : 'top'}>
+                            <IconButton
+                                aria-label="设置"
+                                icon={GearIcon}
+                                variant="invisible"
+                                onClick={onSettingsClick}
+                                size="medium"
+                            />
+                        </Tooltip>
+                    </Box>
                 </Box>
             </Box>
 

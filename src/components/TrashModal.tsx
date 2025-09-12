@@ -112,7 +112,7 @@ const TrashModal: React.FC<TrashModalProps> = ({
     }, [open, loadDeletedEnvironments]);
 
     // 渲染单个已删除环境行
-    const renderDeletedEnvironmentRow = (env: ChromeEnvironment) => {
+    const renderDeletedEnvironmentRow = (env: ChromeEnvironment, index: number) => {
         const days = env.deletedAt ? dayjs().diff(dayjs(env.deletedAt), 'days') : 0;
         const isExpiring = days >= 25;
         
@@ -120,32 +120,47 @@ const TrashModal: React.FC<TrashModalProps> = ({
             <Box key={env.id} 
                  display="grid" 
                  gridTemplateColumns="1fr 120px 160px 120px 2fr 180px" 
-                 gap={3} 
-                 py={3} 
-                 px={3} 
-                 borderBottom="1px solid" 
-                 borderColor="border.default"
+                 gap={4} 
+                 py={4} 
+                 px={4} 
                  alignItems="center"
-                 sx={{ '&:hover': { bg: 'canvas.subtle' } }}
+                 sx={{ 
+                     '&:hover': { bg: 'canvas.subtle' },
+                     borderBottom: index < deletedEnvironments.length - 1 ? '1px solid' : 'none',
+                     borderColor: 'border.muted'
+                 }}
             >
                 {/* 名称 */}
                 <Text fontSize="14px" fontWeight="600">{env.name}</Text>
 
                 {/* 分组 */}
-                <Label variant="primary" size="small">{env.groupName}</Label>
+                <Label 
+                    variant="primary" 
+                    size="small"
+                    sx={{
+                        maxWidth: 'fit-content',
+                        display: 'inline-block'
+                    }}
+                >
+                    {env.groupName}
+                </Label>
 
                 {/* 删除时间 */}
-                <Text fontSize="12px">
-                    {env.deletedAt ? dayjs(env.deletedAt).format('YYYY-MM-DD HH:mm') : '-'}
+                <Text fontSize="12px" color="fg.muted">
+                    {env.deletedAt ? dayjs(env.deletedAt).format('MM-DD HH:mm') : '-'}
                 </Text>
 
                 {/* 删除时长 */}
-                <Label variant={isExpiring ? 'danger' : 'default'} size="small">
+                <Text 
+                    fontSize="12px" 
+                    color={isExpiring ? 'danger.fg' : 'fg.muted'}
+                    fontWeight={isExpiring ? '600' : '400'}
+                >
                     {env.deletedAt ? `${days} 天前${isExpiring ? ' (即将过期)' : ''}` : '-'}
-                </Label>
+                </Text>
 
                 {/* 备注 */}
-                <Text fontSize="12px" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <Text fontSize="12px" color="fg.muted" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {env.notes || '-'}
                 </Text>
 
@@ -238,17 +253,15 @@ const TrashModal: React.FC<TrashModalProps> = ({
                             </Text>
                         </Box>
                     ) : (
-                        <Box border="1px solid" borderColor="border.default" borderRadius={2} overflow="hidden">
+                        <Box borderRadius={2} overflow="hidden">
                             {/* 表头 */}
                             <Box 
                                 display="grid" 
                                 gridTemplateColumns="1fr 120px 160px 120px 2fr 180px" 
-                                gap={3} 
-                                py={2} 
-                                px={3} 
+                                gap={4} 
+                                py={4} 
+                                px={4} 
                                 bg="canvas.subtle"
-                                borderBottom="1px solid"
-                                borderColor="border.default"
                                 fontWeight="600"
                             >
                                 <Text fontSize="12px" color="fg.muted">名称</Text>
@@ -263,6 +276,7 @@ const TrashModal: React.FC<TrashModalProps> = ({
                             <Box 
                                 maxHeight="400px" 
                                 overflow="auto"
+                                bg="canvas.default"
                                 sx={{
                                     '&::-webkit-scrollbar': {
                                         width: '8px',
@@ -283,17 +297,15 @@ const TrashModal: React.FC<TrashModalProps> = ({
                                         <Text ml={2} color="fg.muted">加载中...</Text>
                                     </Box>
                                 ) : (
-                                    deletedEnvironments.map(renderDeletedEnvironmentRow)
+                                    deletedEnvironments.map((env, index) => renderDeletedEnvironmentRow(env, index))
                                 )}
                             </Box>
                             
                             {/* 分页信息 */}
                             {!loading && deletedEnvironments.length > 0 && (
                                 <Box 
-                                    py={2} 
-                                    px={3} 
-                                    borderTop="1px solid" 
-                                    borderColor="border.default"
+                                    py={3} 
+                                    px={4} 
                                     bg="canvas.subtle"
                                 >
                                     <Text fontSize="12px" color="fg.muted">

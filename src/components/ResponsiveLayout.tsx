@@ -6,23 +6,25 @@ interface ResponsiveLayoutProps {
     header: React.ReactNode;
     sidebar: React.ReactNode;
     content: React.ReactNode;
+    sidebarCollapsed?: boolean;
+    onToggleSidebar?: () => void;
 }
 
 const ResponsiveLayout: React.FC<ResponsiveLayoutProps> = ({
     header,
     sidebar,
-    content
+    content,
+    sidebarCollapsed = false,
+    onToggleSidebar
 }) => {
     const [isMobile, setIsMobile] = useState(false);
     const [sidebarVisible, setSidebarVisible] = useState(false);
-    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
     // 检测屏幕尺寸
     useEffect(() => {
         const checkScreenSize = () => {
             const width = window.innerWidth;
             setIsMobile(width < 768);
-            setSidebarCollapsed(width < 1024 && width >= 768);
         };
 
         checkScreenSize();
@@ -100,7 +102,7 @@ const ResponsiveLayout: React.FC<ResponsiveLayoutProps> = ({
                         aria-label={sidebarCollapsed ? '展开侧边栏' : '收起侧边栏'}
                         icon={ThreeBarsIcon}
                         variant="invisible"
-                        onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                        onClick={onToggleSidebar}
                         sx={{ mr: 3 }}
                     />
                     {header}
@@ -109,16 +111,25 @@ const ResponsiveLayout: React.FC<ResponsiveLayoutProps> = ({
 
             <PageLayout.Pane 
                 position="start" 
-                width={sidebarCollapsed ? 'narrow' : 'medium'}
-                resizable={true}
-                sx={{ height: '100%' }}
+                width={sidebarCollapsed ? 60 : 250}
+                resizable={!sidebarCollapsed}
+                sx={{ height: '100%', transition: 'width 0.2s ease' }}
             >
                 {React.cloneElement(sidebar as React.ReactElement, { 
                     collapsed: sidebarCollapsed 
                 })}
             </PageLayout.Pane>
 
-            <PageLayout.Content padding="none" sx={{ flex: 1, overflow: 'hidden', height: 'calc(100vh - 60px)' }}>
+            <PageLayout.Content 
+                padding="none" 
+                sx={{ 
+                    flex: 1, 
+                    overflow: 'hidden', 
+                    height: 'calc(100vh - 60px)',
+                    width: `calc(100vw - ${sidebarCollapsed ? 60 : 250}px)`,
+                    transition: 'width 0.2s ease'
+                }}
+            >
                 {content}
             </PageLayout.Content>
         </PageLayout>

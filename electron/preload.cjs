@@ -64,6 +64,21 @@ try {
             // 选择文件夹
             selectFolder: () => ipcRenderer.invoke("select-folder"),
         },
+
+        // 事件监听API
+        on: (channel, callback) => {
+            const validChannels = ['chrome-status-changed'];
+            if (validChannels.includes(channel)) {
+                ipcRenderer.on(channel, callback);
+            }
+        },
+
+        removeListener: (channel, callback) => {
+            const validChannels = ['chrome-status-changed'];
+            if (validChannels.includes(channel)) {
+                ipcRenderer.removeListener(channel, callback);
+            }
+        },
     });
 
     console.log("预加载脚本成功执行，electronAPI已注入");

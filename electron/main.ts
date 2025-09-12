@@ -9,7 +9,8 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // 设置日志
-log.transports.file.level = 'info';
+log.transports.file.level = 'debug';
+log.transports.console.level = 'debug';
 log.info('Application starting...');
 
 // 输出环境变量信息
@@ -122,6 +123,11 @@ function createWindow() {
 app.whenReady().then(() => {
     createWindow();
 
+    // 设置ChromeManager的主窗口引用
+    if (mainWindow) {
+        chromeManager.setMainWindow(mainWindow);
+    }
+
     // 设置IPC处理程序
     setupIpcHandlers();
 
@@ -129,12 +135,18 @@ app.whenReady().then(() => {
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) {
             createWindow();
+            if (mainWindow) {
+                chromeManager.setMainWindow(mainWindow);
+            }
         }
     });
 });
 
 // 所有窗口关闭时退出应用（Windows & Linux）
 app.on('window-all-closed', () => {
+    // 停止状态监控
+    chromeManager.stopStatusMonitoring();
+    
     if (process.platform !== 'darwin') {
         app.quit();
     }

@@ -38,6 +38,8 @@ export interface ElectronAPI {
         saveSettings: (settings: {dataPath: string}) => Promise<boolean>;
         selectFolder: () => Promise<{canceled: boolean, filePaths: string[]}>;
     };
+    on: (channel: string, callback: (...args: any[]) => void) => void;
+    removeListener: (channel: string, callback: (...args: any[]) => void) => void;
 }
 
 // 全局Window类型扩展

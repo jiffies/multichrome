@@ -24,7 +24,7 @@ type EnvironmentAction =
 const initialState: EnvironmentState = {
     environments: [],
     loading: true,
-    currentGroup: '全部',
+    currentGroup: '用户分组',
     emptyGroups: []
 };
 
@@ -71,6 +71,7 @@ interface EnvironmentContextType {
         launchEnvironment: (id: string) => Promise<void>;
         closeEnvironment: (id: string) => Promise<void>;
         deleteEnvironment: (id: string) => Promise<void>;
+        updateEnvironment: (id: string, data: Partial<ChromeEnvironment>) => Promise<void>;
         deleteEmptyGroup: (groupName: string) => Promise<void>;
         setCurrentGroup: (group: string) => void;
         refreshEnvironments: () => Promise<void>;
@@ -145,7 +146,8 @@ export const EnvironmentProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
         try {
             await window.electronAPI.chromeEnvironments.launch(id);
-            // 乐观更新：立即更新运行状态
+            // 启动成功后，状态监控会自动检测并更新状态
+            // 为了更好的用户体验，可以立即显示运行中状态
             const updatedEnv = state.environments.find(env => env.id === id);
             if (updatedEnv) {
                 dispatch({ 
@@ -153,12 +155,8 @@ export const EnvironmentProvider: React.FC<{ children: React.ReactNode }> = ({ c
                     payload: { ...updatedEnv, isRunning: true } 
                 });
             }
-            // 短暂延迟后刷新状态以确保准确性
-            setTimeout(loadEnvironments, 1000);
         } catch (err) {
             handleError(err, '启动环境');
-            // 如果失败，刷新状态以恢复正确状态
-            loadEnvironments();
         }
     }, [handleError, loadEnvironments, state.environments]);
 
@@ -203,6 +201,21 @@ export const EnvironmentProvider: React.FC<{ children: React.ReactNode }> = ({ c
         }
     }, [handleError, loadEmptyGroups]);
 
+    // 更新环境
+    const updateEnvironment = useCallback(async (id: string, data: Partial<ChromeEnvironment>) => {
+        if (!window.electronAPI || !window.electronAPI.chromeEnvironments) {
+            handleError(new Error('Electron API未正确加载'), '更新环境');
+            return;
+        }
+
+        try {
+            const updatedEnv = await window.electronAPI.chromeEnvironments.update(id, data);
+            dispatch({ type: 'UPDATE_ENVIRONMENT', payload: updatedEnv });
+        } catch (err) {
+            handleError(err, '更新环境');
+        }
+    }, [handleError]);
+
     // 删除空分组
     const deleteEmptyGroup = useCallback(async (groupName: string) => {
         if (!window.electronAPI || !window.electronAPI.chromeEnvironments) {
@@ -213,9 +226,9 @@ export const EnvironmentProvider: React.FC<{ children: React.ReactNode }> = ({ c
         try {
             const success = await window.electronAPI.chromeEnvironments.deleteEmptyGroup(groupName);
             if (success) {
-                // 如果当前选中的是被删除的分组，则切换到"全部"
+                // 如果当前选中的是被删除的分组，则切换到用户分组
                 if (state.currentGroup === groupName) {
-                    dispatch({ type: 'SET_CURRENT_GROUP', payload: '全部' });
+                    dispatch({ type: 'SET_CURRENT_GROUP', payload: '用户分组' });
                 }
                 // 重新加载空分组
                 loadEmptyGroups();
@@ -246,6 +259,27 @@ export const EnvironmentProvider: React.FC<{ children: React.ReactNode }> = ({ c
         }
     }, [loadEnvironments, loadEmptyGroups, handleError]);
 
+    // 监听Chrome进程状态变化
+    useEffect(() => {
+        const handleStatusChange = () => {
+            // 当收到状态变化通知时，刷新环境列表
+            loadEnvironments();
+        };
+
+        // 添加事件监听器
+        if (window.electronAPI && window.electronAPI.on) {
+            window.electronAPI.on('chrome-status-changed', handleStatusChange);
+        }
+
+        // 清理事件监听器
+        return () => {
+            if (window.electronAPI && window.electronAPI.removeListener) {
+                window.electronAPI.removeListener('chrome-status-changed', handleStatusChange);
+            }
+        };
+    }, [loadEnvironments]);
+
+
     const contextValue: EnvironmentContextType = {
         state,
         actions: {
@@ -255,6 +289,7 @@ export const EnvironmentProvider: React.FC<{ children: React.ReactNode }> = ({ c
             launchEnvironment,
             closeEnvironment,
             deleteEnvironment,
+            updateEnvironment,
             deleteEmptyGroup,
             setCurrentGroup,
             refreshEnvironments

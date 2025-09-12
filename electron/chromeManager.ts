@@ -1,11 +1,11 @@
-import { spawn, ChildProcess } from 'child_process';
+import { spawn, ChildProcess, execSync } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 import Database from 'better-sqlite3';
 import Store from 'electron-store';
 import log from 'electron-log';
-import { app } from 'electron';
+import { app, BrowserWindow } from 'electron';
 import os from 'os';
 import { SettingsManager } from './settingsManager.js';
 
@@ -52,6 +52,8 @@ export class ChromeManager {
     private environmentsDataDir: string;
     private settingsManager: SettingsManager;
     private appDataPath: string;
+    private statusCheckInterval: NodeJS.Timeout | null = null;
+    private mainWindow: BrowserWindow | null = null;
 
     constructor() {
         // 初始化设置管理器
@@ -95,7 +97,99 @@ export class ChromeManager {
         // 初始化数据库表
         this.initDatabase();
 
+        // 启动状态检查定时器
+        this.startStatusMonitoring();
+
         log.info('ChromeManager initialized');
+    }
+
+    // 设置主窗口引用
+    public setMainWindow(window: BrowserWindow): void {
+        this.mainWindow = window;
+    }
+
+    // 启动状态监控
+    private startStatusMonitoring(): void {
+        // 每5秒检查一次进程状态
+        this.statusCheckInterval = setInterval(() => {
+            this.checkProcessStatus();
+        }, 5000);
+    }
+
+    // 检查进程状态
+    private async checkProcessStatus(): Promise<void> {
+        try {
+            let statusChanged = false;
+            const idsToRemove: string[] = [];
+
+            log.debug(`检查进程状态: 当前运行中进程数量=${this.runningProcesses.size}`);
+
+            // 检查每个运行中的进程
+            for (const [id, processInfo] of this.runningProcesses.entries()) {
+                const dataDir = (processInfo as any).dataDir;
+                if (!dataDir) continue;
+
+                // 使用PowerShell命令直接检查进程是否存在
+                const isRunning = await this.checkChromeProcessByDataDir(dataDir);
+                
+                if (!isRunning) {
+                    idsToRemove.push(id);
+                    statusChanged = true;
+                    log.info(`检测到Chrome环境进程已结束: ID=${id}, DataDir=${dataDir}`);
+                } else {
+                    log.debug(`Chrome进程正在运行: ID=${id}, DataDir=${dataDir}`);
+                }
+            }
+
+            // 移除已结束的进程
+            idsToRemove.forEach(id => {
+                this.runningProcesses.delete(id);
+            });
+
+            // 如果状态发生变化，通知前端
+            if (statusChanged && this.mainWindow && !this.mainWindow.isDestroyed()) {
+                log.info(`进程状态发生变化，通知前端更新: 变化数量=${idsToRemove.length}`);
+                this.mainWindow.webContents.send('chrome-status-changed');
+            }
+        } catch (error) {
+            log.error('检查进程状态失败:', error);
+        }
+    }
+
+    // 检查进程是否还在运行
+    private isProcessRunning(process: ChildProcess): boolean {
+        // 进程已被杀死
+        if (process.killed) {
+            return false;
+        }
+
+        // 进程已退出
+        if (process.exitCode !== null) {
+            return false;
+        }
+
+        // 没有PID说明进程异常
+        if (!process.pid) {
+            return false;
+        }
+
+        // 尝试发送0信号来检查进程是否存在（跨平台方法）
+        try {
+            // 发送0信号不会真正杀死进程，只是检查进程是否存在
+            process.kill(0);
+            return true;
+        } catch (error) {
+            // 如果抛出异常，说明进程不存在
+            return false;
+        }
+    }
+
+    // 停止状态监控
+    public stopStatusMonitoring(): void {
+        if (this.statusCheckInterval) {
+            clearInterval(this.statusCheckInterval);
+            this.statusCheckInterval = null;
+        }
     }
 
     // 初始化数据库表
@@ -173,7 +267,6 @@ export class ChromeManager {
             for (const name of possibleNames) {
                 try {
                     // 尝试使用which命令查找可执行文件路径
-                    const { execSync } = require('child_process');
                     const chromePath = execSync(`which ${name}`).toString().trim();
                     if (chromePath) {
                         return chromePath;
@@ -326,24 +419,30 @@ export class ChromeManager {
             // 打印完整的启动命令和参数
             console.log(`执行Chrome启动命令: ${chromePath} ${args.join(' ')}`);
 
-            // 启动Chrome进程
-            const chromeProcess = spawn(chromePath, args, {
+            // Windows平台的Chrome启动配置
+            const spawnOptions = process.platform === 'win32' ? {
+                detached: false,  // Windows下不分离进程
+                stdio: 'ignore' as const,
+                windowsHide: false  // 允许显示Chrome窗口
+            } : {
                 detached: true,
-                stdio: 'ignore'
-            });
+                stdio: 'ignore' as const
+            };
 
-            // 存储进程引用
-            this.runningProcesses.set(id, chromeProcess);
+            // 启动Chrome进程
+            const chromeProcess = spawn(chromePath, args, spawnOptions);
 
             // 更新最后使用时间
             this.db.prepare('UPDATE environments SET lastUsed = ? WHERE id = ?')
                 .run(new Date().toISOString(), id);
 
-            // 处理进程退出
-            chromeProcess.on('exit', () => {
-                log.info(`Chrome环境已关闭: ${env.name} (${id})`);
-                this.runningProcesses.delete(id);
-            });
+            log.info(`Chrome启动命令已执行，环境=${env.name} (${id})`);
+            
+            // 简单记录启动请求（不跟踪启动进程PID）
+            this.runningProcesses.set(id, { 
+                pid: 0, // 占位符，实际PID由定时检查获得
+                dataDir: env.dataDir 
+            } as any);
 
             log.info(`启动Chrome环境: ${env.name} (${id})`);
             return true;
@@ -363,11 +462,24 @@ export class ChromeManager {
                 return false;
             }
 
+            log.info(`开始关闭Chrome环境: ID=${id}, PID=${process.pid}`);
+
             // 尝试正常关闭进程
-            process.kill();
+            if (process.pid) {
+                process.kill('SIGTERM'); // 使用SIGTERM信号正常关闭
+                
+                // 等待一段时间后强制关闭
+                setTimeout(() => {
+                    if (this.runningProcesses.has(id) && !process.killed) {
+                        log.warn(`进程未正常关闭，强制杀死: ID=${id}, PID=${process.pid}`);
+                        process.kill('SIGKILL');
+                    }
+                }, 3000);
+            }
+
             this.runningProcesses.delete(id);
 
-            log.info(`关闭Chrome环境: ${id}`);
+            log.info(`Chrome环境关闭请求已发送: ID=${id}, PID=${process.pid}`);
             return true;
         } catch (error) {
             log.error('关闭环境失败:', error);
@@ -591,4 +703,29 @@ export class ChromeManager {
             return count.count === 0;
         });
     }
+
+    // 简单检查Chrome进程是否存在
+    private async checkChromeProcessByDataDir(dataDir: string): Promise<boolean> {
+        try {
+            if (process.platform === 'win32') {
+                const normalizedDataDir = dataDir.replace(/\\/g, '\\');
+                const command = `powershell "Get-WmiObject -Class Win32_Process -Filter \\"Name='chrome.exe'\\" | Where-Object { $_.CommandLine -like '*${normalizedDataDir}*' } | Select-Object ProcessId | Format-Table -HideTableHeaders"`;
+                
+                const output = execSync(command, { 
+                    encoding: 'utf8', 
+                    timeout: 5000,
+                    windowsHide: true
+                });
+                
+                // 检查是否有PID输出
+                const lines = output.split('\n').map(line => line.trim()).filter(line => line && !isNaN(Number(line)));
+                return lines.length > 0;
+            }
+            return false;
+        } catch (error) {
+            log.debug(`检查Chrome进程失败: ${dataDir}`, error);
+            return false;
+        }
+    }
+
 } 
