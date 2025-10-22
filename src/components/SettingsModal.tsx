@@ -6,9 +6,19 @@ import { FileDirectoryIcon } from '@primer/octicons-react';
 interface SettingsModalProps {
     open: boolean;
     onCancel: () => void;
-    onSave: (settings: { dataPath: string }) => Promise<boolean>;
+    onSave: (settings: {
+        dataPath: string;
+        globalProxy?: {
+            enabled: boolean;
+            address: string;
+        };
+    }) => Promise<boolean>;
     currentSettings: {
         dataPath: string;
+        globalProxy?: {
+            enabled: boolean;
+            address: string;
+        };
     };
 }
 
@@ -20,12 +30,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 }) => {
     const [loading, setLoading] = useState(false);
     const [dataPath, setDataPath] = useState('');
+    const [proxyEnabled, setProxyEnabled] = useState(false);
+    const [proxyAddress, setProxyAddress] = useState('');
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
 
     useEffect(() => {
         if (open) {
             setDataPath(currentSettings.dataPath || '');
+            setProxyEnabled(currentSettings.globalProxy?.enabled || false);
+            setProxyAddress(currentSettings.globalProxy?.address || '');
             setError('');
             setSuccess('');
         }
@@ -58,10 +72,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         try {
             setLoading(true);
             setError('');
-            
-            const success = await onSave({ dataPath });
+
+            const success = await onSave({
+                dataPath,
+                globalProxy: {
+                    enabled: proxyEnabled,
+                    address: proxyAddress.trim()
+                }
+            });
             if (success) {
-                setSuccess('设置已保存，将在下次启动时生效');
+                setSuccess('设置已保存');
                 setTimeout(() => {
                     onCancel();
                 }, 1500);
@@ -76,6 +96,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
     const handleCancel = () => {
         setDataPath('');
+        setProxyEnabled(false);
+        setProxyAddress('');
         setError('');
         setSuccess('');
         onCancel();
@@ -134,6 +156,35 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 </Box>
                 <FormControl.Caption>
                     修改后需要重启应用才能生效，数据将被自动迁移到新位置
+                </FormControl.Caption>
+            </FormControl>
+
+            <FormControl sx={{ mt: 4 }}>
+                <FormControl.Label>全局代理</FormControl.Label>
+                <Box display="flex" alignItems="center" sx={{ gap: 2 }}>
+                    <Box
+                        width="14px"
+                        height="14px"
+                        borderRadius="50%"
+                        bg={proxyEnabled ? "success.emphasis" : "neutral.muted"}
+                        sx={{
+                            cursor: 'pointer',
+                            flexShrink: 0,
+                            transition: 'background-color 0.2s'
+                        }}
+                        onClick={() => setProxyEnabled(!proxyEnabled)}
+                        title={proxyEnabled ? "点击禁用代理" : "点击启用代理"}
+                    />
+                    <Box flex={1}>
+                        <TextInput
+                            placeholder="例如: socks5://127.0.0.1:10808"
+                            value={proxyAddress}
+                            onChange={(e) => setProxyAddress(e.target.value)}
+                        />
+                    </Box>
+                </Box>
+                <FormControl.Caption>
+                    所有窗口将使用此代理。点击圆圈可启用/禁用代理。
                 </FormControl.Caption>
             </FormControl>
                 </Dialog>

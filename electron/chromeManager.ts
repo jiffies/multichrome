@@ -433,9 +433,27 @@ export class ChromeManager {
                 '--no-default-browser-check'   // 禁用默认浏览器检查
             ];
 
-            // 添加代理设置（如果有）
-            if (env.proxy) {
-                args.push(`--proxy-server=${env.proxy}`);
+            // 获取全局代理设置
+            const settings = this.settingsManager.getSettings();
+            const globalProxy = settings.globalProxy;
+
+            // 调试日志：打印全局代理配置
+            log.info(`全局代理配置: ${JSON.stringify(globalProxy)}`);
+            log.info(`环境代理配置: ${env.proxy}`);
+
+            // 应用代理设置：优先级：环境代理 > 全局代理
+            const proxyAddress = env.proxy || (globalProxy?.enabled ? globalProxy?.address : undefined);
+
+            log.info(`最终使用的代理地址: ${proxyAddress}`);
+
+            if (proxyAddress) {
+                args.push(`--proxy-server=${proxyAddress}`);
+                // 写死 bypass list
+                args.push(`--proxy-bypass-list=*.lan,*.local,<-loopback>`);
+                log.info(`已添加代理参数: --proxy-server=${proxyAddress}`);
+                log.info(`已添加代理绕过列表: --proxy-bypass-list=*.lan,*.local,<-loopback>`);
+            } else {
+                log.info(`未配置代理，跳过代理参数`);
             }
 
             // 添加用户代理（如果有）

@@ -7,6 +7,10 @@ import { app } from 'electron';
 // 应用设置接口
 export interface AppSettings {
     dataPath: string;
+    globalProxy?: {
+        enabled: boolean;
+        address: string;
+    };
 }
 
 // 设置管理器类
@@ -21,6 +25,23 @@ export class SettingsManager {
                 dataPath: {
                     type: 'string',
                     default: app.getPath('userData')
+                },
+                globalProxy: {
+                    type: 'object',
+                    properties: {
+                        enabled: {
+                            type: 'boolean',
+                            default: false
+                        },
+                        address: {
+                            type: 'string',
+                            default: ''
+                        }
+                    },
+                    default: {
+                        enabled: false,
+                        address: ''
+                    }
                 }
             }
         });
@@ -32,13 +53,18 @@ export class SettingsManager {
     public getSettings(): AppSettings {
         try {
             return {
-                dataPath: this.store.get('dataPath')
+                dataPath: this.store.get('dataPath'),
+                globalProxy: this.store.get('globalProxy')
             };
         } catch (error) {
             log.error('获取设置失败:', error);
             // 返回默认设置
             return {
-                dataPath: app.getPath('userData')
+                dataPath: app.getPath('userData'),
+                globalProxy: {
+                    enabled: false,
+                    address: ''
+                }
             };
         }
     }
@@ -69,6 +95,11 @@ export class SettingsManager {
             
             // 保存设置
             this.store.set('dataPath', settings.dataPath);
+
+            // 保存全局代理设置
+            if (settings.globalProxy !== undefined) {
+                this.store.set('globalProxy', settings.globalProxy);
+            }
             
             // 如果数据路径已更改，需要迁移数据
             const currentDataPath = app.getPath('userData');

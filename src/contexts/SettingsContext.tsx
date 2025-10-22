@@ -4,6 +4,10 @@ import { useErrorHandler } from '../hooks/useErrorHandler';
 // 设置类型定义
 interface AppSettings {
     dataPath: string;
+    globalProxy?: {
+        enabled: boolean;
+        address: string;
+    };
 }
 
 // 上下文类型定义

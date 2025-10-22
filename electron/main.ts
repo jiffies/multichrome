@@ -324,13 +324,26 @@ function setupIpcHandlers() {
             if (!settings || typeof settings !== 'object') {
                 throw new Error('设置数据格式无效');
             }
-            
+
             const settingsData = settings as Record<string, unknown>;
             if (!('dataPath' in settingsData) || typeof settingsData.dataPath !== 'string') {
                 throw new Error('dataPath 必须是字符串');
             }
-            
-            const validSettings = { dataPath: settingsData.dataPath };
+
+            // 构建有效的设置对象，包含 dataPath 和 globalProxy
+            const validSettings: any = { dataPath: settingsData.dataPath };
+
+            // 如果有 globalProxy 配置，添加到设置中
+            if ('globalProxy' in settingsData && settingsData.globalProxy) {
+                const proxy = settingsData.globalProxy as Record<string, unknown>;
+                if (typeof proxy.enabled === 'boolean' && typeof proxy.address === 'string') {
+                    validSettings.globalProxy = {
+                        enabled: proxy.enabled,
+                        address: proxy.address
+                    };
+                }
+            }
+
             return await settingsManager.saveSettings(validSettings);
         } catch (error) {
             log.error('保存应用设置失败:', error);
