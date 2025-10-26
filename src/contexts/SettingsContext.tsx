@@ -8,6 +8,7 @@ interface AppSettings {
         enabled: boolean;
         address: string;
     };
+    startupUrl?: string;
 }
 
 // 上下文类型定义

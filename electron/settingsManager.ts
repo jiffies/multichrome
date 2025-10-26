@@ -11,6 +11,7 @@ export interface AppSettings {
         enabled: boolean;
         address: string;
     };
+    startupUrl?: string;
 }
 
 // 设置管理器类
@@ -42,6 +43,10 @@ export class SettingsManager {
                         enabled: false,
                         address: ''
                     }
+                },
+                startupUrl: {
+                    type: 'string',
+                    default: ''
                 }
             }
         });
@@ -54,7 +59,8 @@ export class SettingsManager {
         try {
             return {
                 dataPath: this.store.get('dataPath'),
-                globalProxy: this.store.get('globalProxy')
+                globalProxy: this.store.get('globalProxy'),
+                startupUrl: this.store.get('startupUrl')
             };
         } catch (error) {
             log.error('获取设置失败:', error);
@@ -64,7 +70,8 @@ export class SettingsManager {
                 globalProxy: {
                     enabled: false,
                     address: ''
-                }
+                },
+                startupUrl: ''
             };
         }
     }
@@ -99,6 +106,11 @@ export class SettingsManager {
             // 保存全局代理设置
             if (settings.globalProxy !== undefined) {
                 this.store.set('globalProxy', settings.globalProxy);
+            }
+
+            // 保存启动页设置
+            if (settings.startupUrl !== undefined) {
+                this.store.set('startupUrl', settings.startupUrl);
             }
             
             // 如果数据路径已更改，需要迁移数据

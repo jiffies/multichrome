@@ -12,6 +12,7 @@ interface SettingsModalProps {
             enabled: boolean;
             address: string;
         };
+        startupUrl?: string;
     }) => Promise<boolean>;
     currentSettings: {
         dataPath: string;
@@ -19,6 +20,7 @@ interface SettingsModalProps {
             enabled: boolean;
             address: string;
         };
+        startupUrl?: string;
     };
 }
 
@@ -32,6 +34,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     const [dataPath, setDataPath] = useState('');
     const [proxyEnabled, setProxyEnabled] = useState(false);
     const [proxyAddress, setProxyAddress] = useState('');
+    const [startupUrl, setStartupUrl] = useState('');
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
 
@@ -40,6 +43,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             setDataPath(currentSettings.dataPath || '');
             setProxyEnabled(currentSettings.globalProxy?.enabled || false);
             setProxyAddress(currentSettings.globalProxy?.address || '');
+            setStartupUrl(currentSettings.startupUrl || '');
             setError('');
             setSuccess('');
         }
@@ -78,7 +82,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 globalProxy: {
                     enabled: proxyEnabled,
                     address: proxyAddress.trim()
-                }
+                },
+                startupUrl: startupUrl.trim()
             });
             if (success) {
                 setSuccess('设置已保存');
@@ -98,6 +103,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         setDataPath('');
         setProxyEnabled(false);
         setProxyAddress('');
+        setStartupUrl('');
         setError('');
         setSuccess('');
         onCancel();
@@ -185,6 +191,19 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 </Box>
                 <FormControl.Caption>
                     所有窗口将使用此代理。点击圆圈可启用/禁用代理。
+                </FormControl.Caption>
+            </FormControl>
+
+            <FormControl sx={{ mt: 4 }}>
+                <FormControl.Label>启动页</FormControl.Label>
+                <TextInput
+                    placeholder="例如: https://www.google.com"
+                    value={startupUrl}
+                    onChange={(e) => setStartupUrl(e.target.value)}
+                    sx={{ width: '100%' }}
+                />
+                <FormControl.Caption>
+                    启动时将恢复上次会话，并额外打开此网页。留空则只恢复会话。
                 </FormControl.Caption>
             </FormControl>
                 </Dialog>

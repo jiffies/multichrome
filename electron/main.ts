@@ -344,6 +344,11 @@ function setupIpcHandlers() {
                 }
             }
 
+            // 如果有 startupUrl 配置，添加到设置中
+            if ('startupUrl' in settingsData && typeof settingsData.startupUrl === 'string') {
+                validSettings.startupUrl = settingsData.startupUrl;
+            }
+
             return await settingsManager.saveSettings(validSettings);
         } catch (error) {
             log.error('保存应用设置失败:', error);

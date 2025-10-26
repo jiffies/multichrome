@@ -461,6 +461,21 @@ export class ChromeManager {
                 args.push(`--user-agent=${env.userAgent}`);
             }
 
+            // 始终恢复上次会话
+            args.push('--restore-last-session');
+            log.info(`已添加恢复会话参数`);
+
+            // 获取启动页设置
+            const startupUrl = settings.startupUrl;
+
+            if (startupUrl && startupUrl.trim()) {
+                // Chrome 启动时会恢复上次会话，并额外打开这个 URL
+                args.push(startupUrl.trim());
+                log.info(`已添加启动页: ${startupUrl.trim()}`);
+            } else {
+                log.info(`未配置启动页，只恢复上次会话`);
+            }
+
             // 打印完整的启动命令和参数
             console.log(`执行Chrome启动命令: ${chromePath} ${args.join(' ')}`);
 
