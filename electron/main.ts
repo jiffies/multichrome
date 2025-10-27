@@ -278,6 +278,7 @@ function setupIpcHandlers() {
             if ('notes' in updateData) validData.notes = typeof updateData.notes === 'string' ? updateData.notes : '';
             if ('walletAddress' in updateData) validData.walletAddress = typeof updateData.walletAddress === 'string' ? updateData.walletAddress : undefined;
             if ('proxy' in updateData) validData.proxy = typeof updateData.proxy === 'string' ? updateData.proxy : undefined;
+            if ('proxyLabel' in updateData) validData.proxyLabel = typeof updateData.proxyLabel === 'string' ? updateData.proxyLabel : undefined;
             if ('userAgent' in updateData) validData.userAgent = typeof updateData.userAgent === 'string' ? updateData.userAgent : undefined;
             
             return await chromeManager.updateEnvironment(validId, validData);

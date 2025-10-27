@@ -19,6 +19,7 @@ export interface ChromeEnvironment {
     dataDir: string;
     tags: string[];
     proxy?: string;
+    proxyLabel?: string; // 代理标签(如"菲律宾"、"美国")
     userAgent?: string;
     createdAt: string;
     lastUsed: string;
@@ -37,6 +38,7 @@ interface DBEnvironment {
     dataDir: string;
     tags: string; // 数据库中是JSON字符串
     proxy?: string;
+    proxyLabel?: string; // 代理标签
     userAgent?: string;
     createdAt: string;
     lastUsed: string;
@@ -217,9 +219,11 @@ export class ChromeManager {
         name TEXT NOT NULL,
         groupName TEXT NOT NULL,
         notes TEXT,
+        walletAddress TEXT,
         dataDir TEXT NOT NULL,
         tags TEXT,
         proxy TEXT,
+        proxyLabel TEXT,
         userAgent TEXT,
         createdAt TEXT NOT NULL,
         lastUsed TEXT NOT NULL,
@@ -236,19 +240,29 @@ export class ChromeManager {
         try {
             // 检查表结构信息
             const tableInfo = this.db.prepare("PRAGMA table_info(environments)").all() as Array<{name: string}>;
-            
+            log.info('当前数据库列:', tableInfo.map(col => col.name).join(', '));
+
             // 检查 deletedAt 列是否存在
             const hasDeletedAt = tableInfo.some(column => column.name === 'deletedAt');
             if (!hasDeletedAt) {
                 this.db.exec('ALTER TABLE environments ADD COLUMN deletedAt TEXT');
                 log.info('数据库已迁移：添加 deletedAt 列');
             }
-            
+
             // 检查 walletAddress 列是否存在
             const hasWalletAddress = tableInfo.some(column => column.name === 'walletAddress');
             if (!hasWalletAddress) {
                 this.db.exec('ALTER TABLE environments ADD COLUMN walletAddress TEXT');
                 log.info('数据库已迁移：添加 walletAddress 列');
+            }
+
+            // 检查 proxyLabel 列是否存在
+            const hasProxyLabel = tableInfo.some(column => column.name === 'proxyLabel');
+            log.info(`proxyLabel 列是否存在: ${hasProxyLabel}`);
+            if (!hasProxyLabel) {
+                log.info('准备添加 proxyLabel 列...');
+                this.db.exec('ALTER TABLE environments ADD COLUMN proxyLabel TEXT');
+                log.info('数据库已迁移：添加 proxyLabel 列');
             }
         } catch (error) {
             log.error('数据库迁移失败:', error);

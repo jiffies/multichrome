@@ -39,6 +39,9 @@ const EnvironmentList: React.FC<EnvironmentListProps> = ({
     const [editingNotes, setEditingNotes] = useState('');
     const [editingWalletId, setEditingWalletId] = useState<string | null>(null);
     const [editingWallet, setEditingWallet] = useState('');
+    const [editingProxyId, setEditingProxyId] = useState<string | null>(null);
+    const [editingProxy, setEditingProxy] = useState('');
+    const [editingProxyLabel, setEditingProxyLabel] = useState('');
     const [sortBy, setSortBy] = useState<'lastUsed' | 'createdAt'>('lastUsed');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
@@ -113,6 +116,43 @@ const EnvironmentList: React.FC<EnvironmentListProps> = ({
     const handleCancelEditWallet = () => {
         setEditingWalletId(null);
         setEditingWallet('');
+    };
+
+    // 开始编辑代理
+    const handleStartEditProxy = (id: string, currentProxy: string, currentProxyLabel: string) => {
+        setEditingProxyId(id);
+        setEditingProxy(currentProxy || '');
+        setEditingProxyLabel(currentProxyLabel || '');
+    };
+
+    // 保存代理
+    const handleSaveProxy = async (id: string) => {
+        const trimmedProxy = editingProxy.trim();
+        const trimmedProxyLabel = editingProxyLabel.trim();
+        const env = environments.find(env => env.id === id);
+        const currentProxy = env?.proxy || '';
+        const currentProxyLabel = env?.proxyLabel || '';
+
+        if (trimmedProxy !== currentProxy || trimmedProxyLabel !== currentProxyLabel) {
+            if (onUpdateEnvironment) {
+                // 同时保存代理地址和标签
+                const updateData: Partial<ChromeEnvironment> = {
+                    proxy: trimmedProxy || undefined,
+                    proxyLabel: trimmedProxyLabel || undefined
+                };
+                await onUpdateEnvironment(id, updateData);
+            }
+        }
+        setEditingProxyId(null);
+        setEditingProxy('');
+        setEditingProxyLabel('');
+    };
+
+    // 取消编辑代理
+    const handleCancelEditProxy = () => {
+        setEditingProxyId(null);
+        setEditingProxy('');
+        setEditingProxyLabel('');
     };
 
     // 格式化钱包地址显示（前6后6位）
@@ -229,12 +269,12 @@ const EnvironmentList: React.FC<EnvironmentListProps> = ({
 
             <Box flex={1} borderRadius={2} overflow="hidden">
                 {/* 表头 */}
-                <Box 
-                    display="grid" 
-                    gridTemplateColumns="80px 120px 80px 140px 120px 2fr 140px 140px 180px" 
-                    gap={2} 
-                    py={4} 
-                    px={4} 
+                <Box
+                    display="grid"
+                    gridTemplateColumns="80px 120px 80px 140px 120px 150px 2fr 140px 140px 180px"
+                    gap={2}
+                    py={4}
+                    px={4}
                     bg="canvas.subtle"
                     fontWeight="600"
                     alignItems="center"
@@ -245,6 +285,7 @@ const EnvironmentList: React.FC<EnvironmentListProps> = ({
                     <Text fontSize="12px" color="fg.muted" fontWeight="600">分组</Text>
                     <Text fontSize="12px" color="fg.muted" fontWeight="600">名称</Text>
                     <Text fontSize="12px" color="fg.muted" fontWeight="600">钱包地址</Text>
+                    <Text fontSize="12px" color="fg.muted" fontWeight="600">代理地址</Text>
                     <Text fontSize="12px" color="fg.muted" fontWeight="600">备注</Text>
                     <Box display="flex" alignItems="center" gap={1} sx={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => handleSortChange('createdAt')}>
                         <Text fontSize="12px" color="fg.muted" fontWeight="600">创建时间</Text>
@@ -287,14 +328,14 @@ const EnvironmentList: React.FC<EnvironmentListProps> = ({
                         </Box>
                     ) : (
                         sortedEnvironments.map((env, index) => (
-                            <Box key={env.id} 
-                                 display="grid" 
-                                 gridTemplateColumns="80px 120px 80px 140px 120px 2fr 140px 140px 180px" 
-                                 gap={2} 
-                                 py={4} 
-                                 px={4} 
+                            <Box key={env.id}
+                                 display="grid"
+                                 gridTemplateColumns="80px 120px 80px 140px 120px 150px 2fr 140px 140px 180px"
+                                 gap={2}
+                                 py={4}
+                                 px={4}
                                  alignItems="center"
-                                 sx={{ 
+                                 sx={{
                                      '&:hover': { bg: 'canvas.subtle' },
                                      minHeight: '52px',
                                      borderBottom: index < sortedEnvironments.length - 1 ? '1px solid' : 'none',
@@ -452,7 +493,105 @@ const EnvironmentList: React.FC<EnvironmentListProps> = ({
                                         {formatWalletAddress(env.walletAddress) || '-'}
                                     </Text>
                                 )}
-                                
+
+                                {/* 代理地址 */}
+                                {editingProxyId === env.id ? (
+                                    <Box display="flex" flexDirection="column" gap={1}>
+                                        <Box display="flex" alignItems="center" gap={1}>
+                                            <TextInput
+                                                value={editingProxyLabel}
+                                                onChange={(e) => setEditingProxyLabel(e.target.value)}
+                                                size="small"
+                                                sx={{ fontSize: '12px', flex: 1 }}
+                                                placeholder="标签(可选,如:菲律宾)"
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') {
+                                                        handleSaveProxy(env.id);
+                                                    } else if (e.key === 'Escape') {
+                                                        handleCancelEditProxy();
+                                                    }
+                                                }}
+                                            />
+                                            <Button
+                                                size="small"
+                                                variant="invisible"
+                                                leadingIcon={CheckIcon}
+                                                onMouseDown={(e) => {
+                                                    e.preventDefault();
+                                                    handleSaveProxy(env.id);
+                                                }}
+                                                sx={{ p: 1 }}
+                                            />
+                                            <Button
+                                                size="small"
+                                                variant="invisible"
+                                                leadingIcon={XIcon}
+                                                onMouseDown={(e) => {
+                                                    e.preventDefault();
+                                                    handleCancelEditProxy();
+                                                }}
+                                                sx={{ p: 1 }}
+                                            />
+                                        </Box>
+                                        <TextInput
+                                            value={editingProxy}
+                                            onChange={(e) => setEditingProxy(e.target.value)}
+                                            size="small"
+                                            sx={{ fontSize: '12px' }}
+                                            placeholder="代理地址(如: 127.0.0.1:10808)"
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    handleSaveProxy(env.id);
+                                                } else if (e.key === 'Escape') {
+                                                    handleCancelEditProxy();
+                                                }
+                                            }}
+                                            autoFocus
+                                        />
+                                    </Box>
+                                ) : (
+                                    <Box
+                                        display="flex"
+                                        flexDirection="column"
+                                        sx={{
+                                            overflow: 'hidden',
+                                            cursor: 'pointer',
+                                            '&:hover': { textDecoration: 'underline' }
+                                        }}
+                                        onClick={() => {
+                                            console.log('点击代理单元格, env:', env);
+                                            handleStartEditProxy(env.id, env.proxy || '', env.proxyLabel || '');
+                                        }}
+                                    >
+                                        {env.proxyLabel && (
+                                            <Text
+                                                fontSize="11px"
+                                                color="accent.fg"
+                                                sx={{
+                                                    overflow: 'hidden',
+                                                    textOverflow: 'ellipsis',
+                                                    whiteSpace: 'nowrap'
+                                                }}
+                                            >
+                                                ({env.proxyLabel})
+                                            </Text>
+                                        )}
+                                        <Text
+                                            fontSize="12px"
+                                            fontFamily="mono"
+                                            color="fg.muted"
+                                            sx={{
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                                whiteSpace: 'nowrap'
+                                            }}
+                                            title={env.proxy || '(全局)'}
+                                        >
+                                            {env.proxy || '(全局)'}
+                                        </Text>
+                                    </Box>
+                                )}
+
                                 {/* 备注 */}
                                 {editingNotesId === env.id ? (
                                     <Box display="flex" alignItems="center" gap={1}>

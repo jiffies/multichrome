@@ -7,10 +7,10 @@
     "scripts": {
         "dev": "concurrently \"npm run dev:vite\" \"npm run dev:electron\"",
         "dev:vite": "vite",
-        "dev:electron": "powershell \"$env:NODE_ENV='development'; tsc -p electron/tsconfig.json; copy electron\\preload.cjs dist\\electron\\preload.cjs; npx electron .\"",
+        "dev:electron": "set NODE_ENV=development && tsc -p electron/tsconfig.json && copy electron\\preload.cjs dist\\electron\\preload.cjs && npx electron .",
         "build": "npm run build:vite && npm run build:electron",
         "build:vite": "vite build",
-        "build:electron": "powershell \"tsc -p electron/tsconfig.json; copy electron\\preload.cjs dist\\electron\\preload.cjs\"",
+        "build:electron": "tsc -p electron/tsconfig.json && copy electron\\preload.cjs dist\\electron\\preload.cjs",
         "start": "npx electron .",
         "package:win": "electron-builder --win",
         "lint": "eslint . --ext .ts,.tsx",

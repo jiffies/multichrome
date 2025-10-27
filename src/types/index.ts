@@ -8,6 +8,7 @@ export interface ChromeEnvironment {
     dataDir: string;
     tags: string[];
     proxy?: string;
+    proxyLabel?: string; // 代理标签(如"菲律宾"、"美国")
     userAgent?: string;
     createdAt: string;
     lastUsed: string;
