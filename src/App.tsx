@@ -84,7 +84,7 @@ const AppContent: React.FC = () => {
                     />
                 }
                 content={
-                    <Box p={3} height="100%" overflow="hidden" display="flex" flexDirection="column">
+                    <Box p={3} height="100%" overflow="hidden" display="flex" flexDirection="column" style={{ minHeight: 0 }}>
                         <EnvironmentList
                             environments={filteredEnvironments}
                             loading={state.loading}

@@ -32,7 +32,6 @@ const EnvironmentList: React.FC<EnvironmentListProps> = ({
     onRefresh,
     onUpdateEnvironment
 }) => {
-    const [tableHeight] = useState('calc(100vh - 160px)');
     const [editingNameId, setEditingNameId] = useState<string | null>(null);
     const [editingName, setEditingName] = useState('');
     const [editingNotesId, setEditingNotesId] = useState<string | null>(null);
@@ -212,7 +211,7 @@ const EnvironmentList: React.FC<EnvironmentListProps> = ({
             <Box>
                 <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
                     <Box display="flex" alignItems="center" gap={2}>
-                        <Heading as="h2" sx={{ fontSize: 3 }}>窗口管理</Heading>
+                        <Heading as="h2" sx={{ fontSize: 3 }}>环境管理</Heading>
                         <Text sx={{ fontSize: 2, color: 'success.fg', fontWeight: '600' }}>
                             ({totalRunning}个运行中)
                         </Text>
@@ -238,7 +237,7 @@ const EnvironmentList: React.FC<EnvironmentListProps> = ({
                     </Box>
                     <Heading as="h3" sx={{ fontSize: 2, mb: 2 }}>没有Chrome环境</Heading>
                     <Text sx={{ mb: 4, color: 'fg.muted' }}>
-                        点击右上角的&quot;新建窗口&quot;按钮创建你的第一个Chrome环境
+                        点击右上角的&quot;新建环境&quot;按钮创建你的第一个Chrome环境
                     </Text>
                     <Button variant="primary" leadingIcon={SyncIcon} onClick={onRefresh}>
                         刷新
@@ -250,10 +249,10 @@ const EnvironmentList: React.FC<EnvironmentListProps> = ({
 
 
     return (
-        <Box height="100%" display="flex" flexDirection="column">
+        <Box height="100%" display="flex" flexDirection="column" style={{ minHeight: 0 }}>
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
                 <Box display="flex" alignItems="center" gap={2}>
-                    <Heading as="h2" sx={{ fontSize: 3 }}>窗口管理</Heading>
+                    <Heading as="h2" sx={{ fontSize: 3 }}>环境管理</Heading>
                     <Text sx={{ fontSize: 2, color: 'success.fg', fontWeight: '600' }}>
                         ({totalRunning}个运行中)
                     </Text>
@@ -267,7 +266,7 @@ const EnvironmentList: React.FC<EnvironmentListProps> = ({
                 </Button>
             </Box>
 
-            <Box flex={1} borderRadius={2} overflow="hidden">
+            <Box borderRadius={2} display="flex" flexDirection="column" style={{ flex: '1 1 0', minHeight: 0, overflow: 'hidden' }}>
                 {/* 表头 */}
                 <Box
                     display="grid"
@@ -278,7 +277,7 @@ const EnvironmentList: React.FC<EnvironmentListProps> = ({
                     bg="canvas.subtle"
                     fontWeight="600"
                     alignItems="center"
-                    sx={{ minHeight: '52px' }}
+                    style={{ minHeight: '52px', flexShrink: 0 }}
                 >
                     <Text fontSize="12px" color="fg.muted" fontWeight="600">状态</Text>
                     <Text fontSize="12px" color="fg.muted" fontWeight="600">ID</Text>
@@ -301,12 +300,11 @@ const EnvironmentList: React.FC<EnvironmentListProps> = ({
                     </Box>
                     <Text fontSize="12px" color="fg.muted" fontWeight="600" textAlign="right">操作</Text>
                 </Box>
-                
+
                 {/* 表格内容 */}
-                <Box 
-                    maxHeight={tableHeight} 
-                    overflow="auto"
+                <Box
                     bg="canvas.default"
+                    style={{ flex: '1 1 0', minHeight: 0, overflow: 'auto' }}
                     sx={{
                         '&::-webkit-scrollbar': {
                             width: '8px',

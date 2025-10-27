@@ -24,7 +24,7 @@ const Header: React.FC<HeaderProps> = ({ onCreateEnvironment }) => {
                 onClick={onCreateEnvironment}
                 sx={{ marginLeft: 3 }}
             >
-                <Box as="span" sx={{ display: ['none', 'inline'] }}>新建窗口</Box>
+                <Box as="span" sx={{ display: ['none', 'inline'] }}>新建环境</Box>
                 <Box as="span" sx={{ display: ['inline', 'none'] }}>新建</Box>
             </Button>
         </Box>

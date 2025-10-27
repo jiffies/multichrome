@@ -190,7 +190,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                     </Box>
                 </Box>
                 <FormControl.Caption>
-                    所有窗口将使用此代理。点击圆圈可启用/禁用代理。
+                    所有环境将使用此代理。点击圆圈可启用/禁用代理。
                 </FormControl.Caption>
             </FormControl>
 
