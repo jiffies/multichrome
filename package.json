@@ -28,12 +28,12 @@
     "author": "MultiChrome Contributors",
     "repository": {
         "type": "git",
-        "url": "https://github.com/yourusername/multichrome.git"
+        "url": "https://github.com/jiffies/multichrome.git"
     },
     "bugs": {
-        "url": "https://github.com/yourusername/multichrome/issues"
+        "url": "https://github.com/jiffies/multichrome/issues"
     },
-    "homepage": "https://github.com/yourusername/multichrome#readme",
+    "homepage": "https://github.com/jiffies/multichrome#readme",
     "license": "MIT",
     "dependencies": {
         "@primer/octicons-react": "^19.18.0",
