@@ -5,9 +5,10 @@
     "description": "Chrome多环境管理工具",
     "main": "dist/electron/main.js",
     "scripts": {
+        "postinstall": "electron-builder install-app-deps",
         "dev": "concurrently \"npm run dev:vite\" \"npm run dev:electron\"",
         "dev:vite": "vite",
-        "dev:electron": "cross-env NODE_ENV=development tsc -p electron/tsconfig.json && npx cpx2 \"electron/preload.cjs\" \"dist/electron\" && npx electron .",
+        "dev:electron": "tsc -p electron/tsconfig.json && npx cpx2 \"electron/preload.cjs\" \"dist/electron\" && cross-env NODE_ENV=development npx electron .",
         "build": "npm run build:vite && npm run build:electron",
         "build:vite": "vite build",
         "build:electron": "tsc -p electron/tsconfig.json && npx cpx2 \"electron/preload.cjs\" \"dist/electron\"",
