@@ -1014,7 +1014,7 @@ export class ChromeManager {
             if (trimmed.includes('--user-data-dir=') && trimmed.includes('environments')) {
                 // 匹配 --user-data-dir=.../environments/xxxxxxxx 格式
                 // 支持 Windows 和 Unix 路径分隔符
-                const match = trimmed.match(/--user-data-dir=.*?environments[\\\/]([a-f0-9]{8})/);
+                const match = trimmed.match(/--user-data-dir=.*?environments[\\/]([a-f0-9]{8})/);
                 if (match && match[1]) {
                     envIds.push(match[1]);
                 }

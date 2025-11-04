@@ -7,10 +7,10 @@
     "scripts": {
         "dev": "concurrently \"npm run dev:vite\" \"npm run dev:electron\"",
         "dev:vite": "vite",
-        "dev:electron": "cross-env NODE_ENV=development tsc -p electron/tsconfig.json && cpx electron/preload.cjs dist/electron && npx electron .",
+        "dev:electron": "cross-env NODE_ENV=development tsc -p electron/tsconfig.json && npx cpx2 \"electron/preload.cjs\" \"dist/electron\" && npx electron .",
         "build": "npm run build:vite && npm run build:electron",
         "build:vite": "vite build",
-        "build:electron": "tsc -p electron/tsconfig.json && cpx electron/preload.cjs dist/electron",
+        "build:electron": "tsc -p electron/tsconfig.json && npx cpx2 \"electron/preload.cjs\" \"dist/electron\"",
         "start": "npx electron .",
         "package:win": "electron-builder --win",
         "package:mac": "electron-builder --mac",
@@ -25,7 +25,15 @@
         "electron",
         "react"
     ],
-    "author": "",
+    "author": "MultiChrome Contributors",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/yourusername/multichrome.git"
+    },
+    "bugs": {
+        "url": "https://github.com/yourusername/multichrome/issues"
+    },
+    "homepage": "https://github.com/yourusername/multichrome#readme",
     "license": "MIT",
     "dependencies": {
         "@primer/octicons-react": "^19.18.0",
@@ -57,7 +65,7 @@
         "@vitejs/plugin-react": "^4.2.1",
         "autoprefixer": "^10.4.16",
         "concurrently": "^8.2.2",
-        "cpx": "^1.5.0",
+        "cpx2": "^8.0.0",
         "cross-env": "^7.0.3",
         "electron": "^28.0.0",
         "electron-builder": "^24.9.1",

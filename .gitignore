@@ -71,7 +71,10 @@ ehthumbs.db
 Desktop.ini
 $RECYCLE.BIN/
 
+# Claude AI 配置
 .claude
 .claude/*
+CLAUDE.md
 
+# 其他
 image

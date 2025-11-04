@@ -1,270 +1,251 @@
-# MultiChrome - Chrome多环境管理工具
+# MultiChrome - Chrome 多环境管理工具
 
-MultiChrome是一个用于管理多个Chrome浏览器环境的桌面应用程序，支持Windows 10和Windows 11平台。该工具允许用户创建、管理和删除独立的Chrome环境，每个环境都有自己的数据目录，确保环境之间完全隔离。
+<div align="center">
 
-## 主要功能
+![MultiChrome Logo](assets/icon.png)
 
-- 创建新的Chrome环境（独立的用户数据目录）
-- 管理现有Chrome环境（启动、关闭、重命名等）
-- 删除不需要的Chrome环境
-- 为每个环境设置标签、分组和备注
-- 显示环境详细信息（代理设置、数据存储位置等）
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-blue.svg)](https://github.com/jiffies/multichrome)
+[![GitHub release](https://img.shields.io/github/release/jiffies/multichrome.svg)](https://github.com/jiffies/multichrome/releases)
 
-## 安装指南
+一个基于 Electron 的跨平台 Chrome 多环境管理工具,让你轻松管理多个完全隔离的 Chrome 浏览器环境。
 
-### 开发环境安装
+[English](README_EN.md) | 简体中文
 
-1. **克隆仓库**
-   ```bash
-   git clone https://github.com/yourusername/multichrome.git
-   cd multichrome
-   ```
+</div>
 
-2. **安装依赖**
-   ```bash
-   npm install
-   ```
-   
-   安装过程中可能会遇到native模块编译问题，特别是`better-sqlite3`模块。如果出现错误，请确保安装了以下前置条件：
-   - Node.js 16+ 和 npm 8+
-   - Windows环境下需要安装Visual Studio构建工具
-   - Python 3.x
+## ✨ 特性
 
-3. **开发环境配置**
-   - 确保已安装Chrome浏览器
-   - 如需修改默认配置，编辑`electron/chromeManager.ts`文件中的相关设置
+- 🌍 **跨平台支持** - 完全支持 Windows、macOS 和 Linux
+- 🔐 **完全隔离** - 每个环境拥有独立的 Cookie、扩展、书签和设置
+- 🗂️ **分组管理** - 按项目或用途对环境进行分组
+- 🏷️ **标签系统** - 为环境添加自定义标签便于筛选
+- 🗑️ **回收站** - 误删除?没问题!支持环境恢复
+- 🌐 **代理支持** - 为每个环境配置独立代理或使用全局代理
+- 💼 **钱包管理** - 记录每个环境关联的钱包地址
+- ⚙️ **灵活配置** - 自定义数据存储路径、启动页等
+- 🎨 **现代 UI** - 基于 GitHub Primer 设计系统的美观界面
+- 📱 **响应式设计** - 支持各种屏幕尺寸,包括超宽屏
 
-### 生产环境安装
+## 📸 截图
 
-1. **下载最新版安装包**
-   - 从[Releases](https://github.com/yourusername/multichrome/releases)页面下载最新版Windows安装包
+<!-- 在这里添加应用截图 -->
 
-2. **运行安装程序**
-   - 运行下载的`.exe`安装文件
-   - 按照向导指引完成安装
-   - 安装程序会自动创建桌面快捷方式
+## 🚀 快速开始
 
-## 使用指南
+### 安装
 
-### 创建新环境
+#### 方式一: 下载预编译版本 (推荐)
 
-1. 点击界面顶部的"创建新环境"按钮
-2. 输入环境名称（如"工作"、"个人"等）
-3. 选择或创建分组（可选）
-4. 添加环境备注（可选）
-5. 点击"创建"按钮
+从 [Releases](https://github.com/jiffies/multichrome/releases) 页面下载适合你系统的安装包:
+
+- **Windows**: `MultiChrome-Setup-x.x.x.exe`
+- **macOS**: `MultiChrome-x.x.x.dmg` 或 `MultiChrome-x.x.x-mac.zip`
+- **Linux**: `MultiChrome-x.x.x.AppImage` 或 `multichrome_x.x.x_amd64.deb`
+
+#### 方式二: 从源码构建
+
+```bash
+# 克隆仓库
+git clone https://github.com/jiffies/multichrome.git
+cd multichrome
+
+# 安装依赖
+npm install
+
+# 开发模式运行
+npm run dev
+
+# 或者构建并打包
+npm run build
+npm run package:win   # Windows
+npm run package:mac   # macOS
+npm run package:linux # Linux
+```
+
+### 前置要求
+
+- Chrome 浏览器已安装
+- **Windows**: Windows 10 或更高版本
+- **macOS**: macOS 10.15 (Catalina) 或更高版本
+- **Linux**: 支持 AppImage 或 deb 包的发行版
+
+## 📖 使用指南
+
+### 创建环境
+
+1. 点击"创建新环境"按钮
+2. 填写环境名称和分组
+3. (可选) 添加备注、钱包地址、标签等
+4. 点击"创建"
+
+### 启动环境
+
+点击环境卡片上的"启动"按钮,将打开一个独立的 Chrome 窗口。该环境的所有数据都与其他环境完全隔离。
+
+### 配置代理
+
+**全局代理**: 在设置中配置全局代理,所有未配置独立代理的环境都会使用全局代理。
+
+**环境代理**: 在环境详情中配置独立代理,优先级高于全局代理。
+
+代理格式示例:
+```
+http://127.0.0.1:7890
+socks5://127.0.0.1:1080
+```
 
 ### 管理环境
 
-1. **启动环境**：在环境列表中点击"启动"按钮，将打开一个新的Chrome窗口
-2. **关闭环境**：在环境列表中点击"关闭"按钮
-3. **查看环境详情**：点击环境卡片查看详细信息
-4. **编辑环境**：在环境详情中修改相关信息
+- **编辑**: 点击环境卡片查看详情并编辑
+- **删除**: 删除的环境会进入回收站,可以恢复
+- **永久删除**: 在回收站中彻底删除环境
 
-### 删除环境
+## 🏗️ 技术架构
 
-1. 在环境列表中点击"删除"按钮
-2. 确认删除操作
-3. 系统将删除环境数据及关联文件
+### 技术栈
 
-### 环境隔离说明
+**前端**
+- React 18 - UI 框架
+- TypeScript - 类型安全
+- Primer React - GitHub 设计系统
+- Tailwind CSS - 样式工具
 
-每个Chrome环境完全独立，包括：
-- 独立的Cookie和会话数据
-- 独立的扩展程序
-- 独立的历史记录和书签
-- 独立的设置和偏好
+**后端 (Electron)**
+- Electron - 桌面应用框架
+- Better SQLite3 - 数据存储
+- Electron Store - 配置管理
+- Electron Log - 日志系统
 
-## 编译与构建指南
-
-### 开发模式
-
-开发模式提供热重载功能,代码修改后自动刷新:
-
-```bash
-# 启动开发服务器(推荐)
-npm run dev
-```
-
-此命令会同时启动:
-- **Vite 开发服务器**: 提供前端热重载
-- **Electron 应用**: 自动打开应用窗口
-
-如需单独启动某个部分:
-
-```bash
-# 仅启动前端开发服务器
-npm run dev:vite
-
-# 仅启动 Electron(需要先构建)
-npm run dev:electron
-```
-
-### 生产环境启动
-
-#### 方式 1: 直接运行构建后的代码(快速测试)
-
-适用于测试生产版本性能和行为:
-
-```bash
-# 1. 构建应用程序
-npm run build
-
-# 2. 启动生产版本
-npm start
-```
-
-**特点:**
-- 使用优化后的生产代码
-- 无热重载,性能更好
-- 适合验证生产环境表现
-
-#### 方式 2: 打包成安装程序(正式发布)
-
-适用于最终用户分发:
-
-```bash
-# 1. 构建应用程序
-npm run build
-
-# 2. 打包为 Windows 安装程序
-npm run package:win
-```
-
-**生成文件:**
-- 安装包位置: `release` 目录
-- 格式: NSIS 安装程序 (`.exe`)
-- 支持用户选择安装目录
-- 自动创建桌面快捷方式
-
-### 开发模式 vs 生产模式
-
-| 特性 | 开发模式 (`npm run dev`) | 生产模式 (`npm start`) |
-|------|------------------------|----------------------|
-| 前端热重载 | ✅ Vite 热更新 | ❌ 需要重新构建 |
-| 代码压缩 | ❌ 原始代码 | ✅ 压缩优化 |
-| DevTools | 自动打开 | 默认关闭 |
-| 启动速度 | 较慢 | 更快 |
-| 性能 | 未优化 | 优化后更快 |
-| 适用场景 | 开发调试 | 测试/发布 |
-
-### 推荐工作流程
-
-**日常开发:**
-```bash
-npm run dev
-```
-
-**测试生产版本:**
-```bash
-npm run build && npm start
-```
-
-**代码检查:**
-```bash
-# 运行 ESLint 检查
-npm run lint
-
-# 自动修复可修复的问题
-npm run lint:fix
-```
-
-**正式发布:**
-```bash
-npm run build
-npm run package:win
-# 在 release 目录找到安装程序进行分发
-```
-
-### CI/CD流程
-
-项目支持通过GitHub Actions自动构建：
-1. 向主分支推送代码会触发自动构建
-2. 标记新版本会自动生成安装包并发布到Releases
-
-## 疑难解答
-
-### 常见问题
-
-1. **无法找到Chrome浏览器**
-   - 检查Chrome是否已安装
-   - 在应用程序设置中手动指定Chrome可执行文件路径
-
-2. **环境启动失败**
-   - 检查Chrome进程是否被其他程序阻止启动
-   - 检查数据目录权限
-
-3. **数据目录问题**
-   - 默认数据存储在`%APPDATA%/multichrome/environments`目录
-   - 确保该目录有足够的磁盘空间和写入权限
-
-### 日志文件
-
-- 应用日志位于：`%APPDATA%/multichrome/logs`
-- 日志文件包含详细的错误信息，可用于故障排除
-
-## 技术架构
-
-### 前端技术栈
-
-- Electron：跨平台桌面应用程序框架
-- React：用户界面库
-- TypeScript：类型安全的JavaScript超集
-- Tailwind CSS：实用优先的CSS框架
-- Ant Design：企业级UI组件库
-
-### 后端技术栈
-
-- Node.js：运行时环境
-- Electron主进程：系统交互和Chrome进程管理
-- SQLite：本地数据存储
-- node-ipc：进程间通信
+**构建工具**
+- Vite - 前端构建
+- Electron Builder - 应用打包
+- ESLint - 代码检查
 
 ### 项目结构
 
 ```
 multichrome/
-├── .github/                  # GitHub相关配置
-├── assets/                   # 静态资源（图标、图片等）
-├── build/                    # 构建配置和脚本
-├── dist/                     # 构建输出目录
-├── electron/                 # Electron主进程代码
-│   ├── main.ts               # 主进程入口
-│   ├── chromeManager.ts      # Chrome环境管理类
-│   ├── preload.ts            # 预加载脚本
-│   └── tsconfig.json         # TypeScript配置
-├── src/                      # 渲染进程代码（React应用）
-│   ├── components/           # UI组件
-│   ├── types/                # TypeScript类型定义
-│   ├── App.tsx               # 应用根组件
-│   └── index.tsx             # 渲染进程入口
-├── .eslintrc                 # ESLint配置
-├── package.json              # 项目依赖和脚本
-├── tsconfig.json             # TypeScript配置
-└── README.md                 # 项目文档
+├── electron/              # Electron 主进程
+│   ├── main.ts           # 应用入口
+│   ├── chromeManager.ts  # Chrome 环境管理
+│   ├── settingsManager.ts # 设置管理
+│   └── cdpManager.ts     # Chrome DevTools Protocol
+├── src/                  # React 渲染进程
+│   ├── components/       # UI 组件
+│   ├── contexts/         # React Context
+│   ├── types/           # TypeScript 类型
+│   └── App.tsx          # 应用根组件
+├── assets/              # 静态资源
+└── .github/             # GitHub 配置
 ```
 
-## 系统要求
+### 跨平台实现
 
-- Windows 10或Windows 11
-- 已安装Chrome浏览器
-- 至少4GB RAM
-- 500MB可用磁盘空间
+- **进程管理**: Windows 使用 PowerShell + WMI,macOS/Linux 使用 ps 命令
+- **路径处理**: 使用 Node.js path 模块确保跨平台兼容
+- **Chrome 检测**: 针对不同平台的标准安装路径自动检测
 
-## 贡献指南
+## 🔧 开发
 
-欢迎贡献代码、报告问题或提出新功能建议。贡献前请先查看现有问题或创建新问题。
+### 开发环境要求
 
-1. Fork项目
-2. 创建功能分支
-3. 提交更改
-4. 推送到分支
-5. 创建Pull Request
+- Node.js 18+
+- npm 8+
+- Git
 
-## 许可证
+### 开发命令
 
-MIT License
+```bash
+# 启动开发服务器 (热重载)
+npm run dev
 
-## 联系方式
+# 仅启动前端
+npm run dev:vite
 
-如有任何问题或建议，请通过GitHub Issues页面联系我们。 
+# 仅启动 Electron
+npm run dev:electron
+
+# 代码检查
+npm run lint
+npm run lint:fix
+
+# 构建
+npm run build
+npm run build:vite      # 仅构建前端
+npm run build:electron  # 仅构建 Electron
+
+# 打包
+npm run package:win     # Windows
+npm run package:mac     # macOS
+npm run package:linux   # Linux
+```
+
+### 贡献指南
+
+我们欢迎所有形式的贡献!请查看 [CONTRIBUTING.md](CONTRIBUTING.md) 了解详情。
+
+**贡献流程:**
+1. Fork 本仓库
+2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交更改 (`git commit -m 'feat: 添加某个功能'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 创建 Pull Request
+
+### 提交规范
+
+我们使用 [Conventional Commits](https://www.conventionalcommits.org/) 规范:
+
+- `feat`: 新功能
+- `fix`: Bug 修复
+- `docs`: 文档更新
+- `style`: 代码格式
+- `refactor`: 重构
+- `test`: 测试
+- `chore`: 构建/工具
+
+## 🐛 问题报告
+
+如果你遇到问题,请在 [Issues](https://github.com/jiffies/multichrome/issues) 中报告,并提供:
+
+- 操作系统和版本
+- MultiChrome 版本
+- Chrome 版本
+- 详细的重现步骤
+- 日志文件 (位于 `%APPDATA%/multichrome/logs`)
+
+## 📝 待办事项
+
+- [ ] 环境导入/导出功能
+- [ ] 环境克隆功能
+- [ ] 批量操作支持
+- [ ] 环境使用统计
+- [ ] 自动更新功能
+- [ ] 多语言支持 (i18n)
+- [ ] 环境备份与同步
+
+## 📄 许可证
+
+本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
+
+## 🙏 致谢
+
+- [Electron](https://www.electronjs.org/) - 跨平台桌面应用框架
+- [React](https://react.dev/) - 用户界面库
+- [Primer React](https://primer.style/react/) - GitHub 设计系统
+- [Better SQLite3](https://github.com/WiseLibs/better-sqlite3) - SQLite 绑定
+
+## 📞 联系方式
+
+- 项目主页: [https://github.com/jiffies/multichrome](https://github.com/jiffies/multichrome)
+- 问题反馈: [https://github.com/jiffies/multichrome/issues](https://github.com/jiffies/multichrome/issues)
+
+---
+
+<div align="center">
+
+**如果这个项目对你有帮助,请给我们一个 ⭐️!**
+
+Made with ❤️ by MultiChrome Contributors
+
+</div>
