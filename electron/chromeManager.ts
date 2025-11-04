@@ -7,7 +7,9 @@ import Store from 'electron-store';
 import log from 'electron-log';
 import { app, BrowserWindow } from 'electron';
 import os from 'os';
+import net from 'net';
 import { SettingsManager } from './settingsManager.js';
+import { CDPManager } from './cdpManager.js';
 
 // Chrome环境接口
 export interface ChromeEnvironment {
@@ -59,8 +61,12 @@ export class ChromeManager {
     private statusCheckInterval: NodeJS.Timeout | null = null;
     private mainWindow: BrowserWindow | null = null;
     private isChecking: boolean = false;
+    private cdpManager: CDPManager;
+    private reservedPorts: Set<number> = new Set(); // 预留的端口集合
 
     constructor() {
+        // 初始化 CDP 管理器
+        this.cdpManager = new CDPManager();
         // 初始化设置管理器
         this.settingsManager = new SettingsManager();
         
@@ -115,10 +121,12 @@ export class ChromeManager {
 
     // 启动状态监控
     private startStatusMonitoring(): void {
-        // 使用2秒检查频率，配合异步执行避免界面阻塞
+        // 使用 CDP 事件驱动 + 轻量级轮询兜底机制
+        // CDP WebSocket 断开时会立即通知（< 100ms）
+        // 轮询仅用于检测 CDP 连接失败或异常情况
         this.statusCheckInterval = setInterval(() => {
             this.checkProcessStatus();
-        }, 2000);
+        }, 300000); // 5分钟轮询兜底
     }
 
     // 检查进程状态
@@ -209,6 +217,9 @@ export class ChromeManager {
             clearInterval(this.statusCheckInterval);
             this.statusCheckInterval = null;
         }
+
+        // 清理所有 CDP 连接
+        this.cdpManager.cleanup();
     }
 
     // 初始化数据库表
@@ -414,6 +425,56 @@ export class ChromeManager {
         }
     }
 
+    // 检查端口是否可用
+    private async isPortAvailable(port: number): Promise<boolean> {
+        return new Promise((resolve) => {
+            const server = net.createServer();
+
+            server.once('error', (err: any) => {
+                if (err.code === 'EADDRINUSE') {
+                    resolve(false); // 端口被占用
+                } else {
+                    resolve(false); // 其他错误也视为不可用
+                }
+            });
+
+            server.once('listening', () => {
+                server.close();
+                resolve(true); // 端口可用
+            });
+
+            server.listen(port, '127.0.0.1');
+        });
+    }
+
+    // 查找可用的调试端口(带端口预留机制,防止竞态条件)
+    private async findAvailableDebugPort(startPort: number = 9222, maxAttempts: number = 100): Promise<number> {
+        for (let i = 0; i < maxAttempts; i++) {
+            const port = startPort + i;
+
+            // 检查是否已被预留
+            if (this.reservedPorts.has(port)) {
+                continue;
+            }
+
+            // 检查端口是否可用
+            const available = await this.isPortAvailable(port);
+
+            if (available) {
+                // 立即预留端口,防止并发分配
+                this.reservedPorts.add(port);
+                return port;
+            }
+        }
+
+        throw new Error(`无法找到可用的调试端口 (尝试范围: ${startPort}-${startPort + maxAttempts - 1})`);
+    }
+
+    // 释放预留的端口
+    private releasePort(port: number): void {
+        this.reservedPorts.delete(port);
+    }
+
     // 启动Chrome环境
     public async launchEnvironment(id: string): Promise<boolean> {
         try {
@@ -440,34 +501,29 @@ export class ChromeManager {
                 throw new Error('Chrome可执行文件未找到');
             }
 
+            // 查找可用的调试端口（从 9222 开始）
+            const debugPort = await this.findAvailableDebugPort(9222);
+            log.info(`[${env.name}] 分配端口: ${debugPort}`);
+
             // 准备启动参数
             const args = [
                 `--user-data-dir=${env.dataDir}`,// 指定用户数据目录，每个环境独立
                 '--no-first-run',              // 禁用首次运行向导
-                '--no-default-browser-check'   // 禁用默认浏览器检查
+                '--no-default-browser-check',   // 禁用默认浏览器检查
+                `--remote-debugging-port=${debugPort}`  // 启用 CDP，使用固定端口便于连接
             ];
 
             // 获取全局代理设置
             const settings = this.settingsManager.getSettings();
             const globalProxy = settings.globalProxy;
 
-            // 调试日志：打印全局代理配置
-            log.info(`全局代理配置: ${JSON.stringify(globalProxy)}`);
-            log.info(`环境代理配置: ${env.proxy}`);
-
             // 应用代理设置：优先级：环境代理 > 全局代理
             const proxyAddress = env.proxy || (globalProxy?.enabled ? globalProxy?.address : undefined);
 
-            log.info(`最终使用的代理地址: ${proxyAddress}`);
-
             if (proxyAddress) {
                 args.push(`--proxy-server=${proxyAddress}`);
-                // 写死 bypass list
                 args.push(`--proxy-bypass-list=*.lan,*.local,<-loopback>`);
-                log.info(`已添加代理参数: --proxy-server=${proxyAddress}`);
-                log.info(`已添加代理绕过列表: --proxy-bypass-list=*.lan,*.local,<-loopback>`);
-            } else {
-                log.info(`未配置代理，跳过代理参数`);
+                log.info(`[${env.name}] 使用代理: ${proxyAddress}`);
             }
 
             // 添加用户代理（如果有）
@@ -477,21 +533,12 @@ export class ChromeManager {
 
             // 始终恢复上次会话
             args.push('--restore-last-session');
-            log.info(`已添加恢复会话参数`);
 
             // 获取启动页设置
             const startupUrl = settings.startupUrl;
-
             if (startupUrl && startupUrl.trim()) {
-                // Chrome 启动时会恢复上次会话，并额外打开这个 URL
                 args.push(startupUrl.trim());
-                log.info(`已添加启动页: ${startupUrl.trim()}`);
-            } else {
-                log.info(`未配置启动页，只恢复上次会话`);
             }
-
-            // 打印完整的启动命令和参数
-            console.log(`执行Chrome启动命令: ${chromePath} ${args.join(' ')}`);
 
             // Windows平台的Chrome启动配置
             const spawnOptions = process.platform === 'win32' ? {
@@ -506,19 +553,85 @@ export class ChromeManager {
             // 启动Chrome进程
             const chromeProcess = spawn(chromePath, args, spawnOptions);
 
+            // 重要说明：spawn 返回的进程只是 Chrome 的启动器进程，会立即退出
+            // Chrome 真正的浏览器进程是独立运行的，通过 CDP 协议跟踪
+
+            // 监听启动器进程的错误（用于检测启动失败）
+            chromeProcess.on('error', (error) => {
+                log.error(`Chrome 启动失败: ID=${id}, error=${error.message}`, error);
+
+                // 释放预留的端口
+                this.releasePort(debugPort);
+
+                this.runningProcesses.delete(id);
+                if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+                    this.mainWindow.webContents.send('chrome-status-changed');
+                }
+            });
+
+            // 标记为运行中（保存调试端口）
+            this.runningProcesses.set(id, {
+                envId: id,
+                dataDir: env.dataDir,
+                debugPort: debugPort,
+                launchedAt: Date.now()
+            } as any);
+
             // 更新最后使用时间
             this.db.prepare('UPDATE environments SET lastUsed = ? WHERE id = ?')
                 .run(new Date().toISOString(), id);
 
-            log.info(`Chrome启动命令已执行，环境=${env.name} (${id})`);
-            
-            // 简单记录启动请求（不跟踪启动进程PID）
-            this.runningProcesses.set(id, { 
-                pid: 0, // 占位符，实际PID由定时检查获得
-                dataDir: env.dataDir 
-            } as any);
+            log.info(`[${env.name}] 启动Chrome - PID:${chromeProcess.pid}, 端口:${debugPort}, ID:${id.substring(0,8)}`);
 
-            log.info(`启动Chrome环境: ${env.name} (${id})`);
+            // 等待 Chrome 启动并建立 CDP 连接
+            setTimeout(async () => {
+                const envIdShort = id.substring(0, 8);
+
+                // 尝试连接 CDP（使用固定端口）
+                const cdpConnected = await this.cdpManager.connect(
+                    id,
+                    debugPort,
+                    () => {
+                        // CDP 断开回调 - 浏览器已关闭
+                        log.info(`[${env.name}] 浏览器已关闭 - 端口:${debugPort}, ID:${envIdShort}`);
+
+                        // 释放预留的端口
+                        this.releasePort(debugPort);
+
+                        this.runningProcesses.delete(id);
+                        if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+                            this.mainWindow.webContents.send('chrome-status-changed');
+                        }
+                    }
+                );
+
+                if (cdpConnected) {
+                    log.info(`✅ [${env.name}] CDP连接成功 - ID:${envIdShort}`);
+                    // 通知前端更新状态
+                    if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+                        this.mainWindow.webContents.send('chrome-status-changed');
+                    }
+                } else {
+                    // CDP 连接失败，使用轮询方式验证
+                    log.warn(`[${env.name}] CDP连接失败，使用轮询检测 - ID:${envIdShort}`);
+
+                    const runningEnvIds = await this.checkAllChromeProcesses();
+                    if (runningEnvIds.includes(envIdShort)) {
+                        log.info(`✅ [${env.name}] 轮询确认运行中 - ID:${envIdShort}`);
+                    } else {
+                        log.error(`❌ [${env.name}] 启动失败 - ID:${envIdShort}`);
+
+                        // 释放预留的端口
+                        this.releasePort(debugPort);
+
+                        this.runningProcesses.delete(id);
+                        if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+                            this.mainWindow.webContents.send('chrome-status-changed');
+                        }
+                    }
+                }
+            }, 2000);
+
             return true;
         } catch (error) {
             log.error('启动环境失败:', error);
@@ -529,31 +642,64 @@ export class ChromeManager {
     // 关闭Chrome环境
     public async closeEnvironment(id: string): Promise<boolean> {
         try {
-            const process = this.runningProcesses.get(id);
+            const envProcess = this.runningProcesses.get(id);
 
-            if (!process) {
-                log.warn(`尝试关闭未运行的环境: ${id}`);
+            if (!envProcess) {
                 return false;
             }
 
-            log.info(`开始关闭Chrome环境: ID=${id}, PID=${process.pid}`);
+            const env = this.db.prepare('SELECT name FROM environments WHERE id = ?').get(id) as { name: string } | undefined;
+            const envName = env?.name || '未知';
+            const envIdShort = id.substring(0, 8);
 
-            // 尝试正常关闭进程
-            if (process.pid) {
-                process.kill('SIGTERM'); // 使用SIGTERM信号正常关闭
-                
-                // 等待一段时间后强制关闭
-                setTimeout(() => {
-                    if (this.runningProcesses.has(id) && !process.killed) {
-                        log.warn(`进程未正常关闭，强制杀死: ID=${id}, PID=${process.pid}`);
-                        process.kill('SIGKILL');
-                    }
-                }, 3000);
+            log.info(`[${envName}] 开始关闭 - ID:${envIdShort}`);
+
+            // 断开 CDP 连接（会自动清理）
+            this.cdpManager.disconnect(id);
+
+            // 通过 Chrome 进程关闭
+            const dataDir = (envProcess as any).dataDir;
+            const debugPort = (envProcess as any).debugPort;
+
+            // 释放预留的端口
+            if (debugPort) {
+                this.releasePort(debugPort);
             }
 
+            if (process.platform === 'win32') {
+                // Windows: 通过 taskkill 关闭进程
+                try {
+                    const command = `powershell "Get-CimInstance -ClassName Win32_Process -Filter \\"Name='chrome.exe'\\" | Where-Object { $_.CommandLine -like '*${envIdShort}*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }"`;
+                    exec(command, { windowsHide: true }, (error) => {
+                        if (!error) {
+                            log.info(`[${envName}] Chrome进程已关闭 - ID:${envIdShort}`);
+                        }
+                    });
+                } catch (error) {
+                    log.error('执行关闭命令失败:', error);
+                }
+            } else {
+                // macOS/Linux: 通过 pkill 关闭
+                try {
+                    const command = `pkill -f "${envIdShort}"`;
+                    exec(command, (error) => {
+                        if (!error) {
+                            log.info(`[${envName}] Chrome进程已关闭 - ID:${envIdShort}`);
+                        }
+                    });
+                } catch (error) {
+                    // 忽略错误
+                }
+            }
+
+            // 从运行列表中移除
             this.runningProcesses.delete(id);
 
-            log.info(`Chrome环境关闭请求已发送: ID=${id}, PID=${process.pid}`);
+            // 通知前端更新
+            if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+                this.mainWindow.webContents.send('chrome-status-changed');
+            }
+
             return true;
         } catch (error) {
             log.error('关闭环境失败:', error);
@@ -778,53 +924,105 @@ export class ChromeManager {
         });
     }
 
-    // 使用一条PowerShell命令查询所有运行中的Chrome环境ID
+    // 使用平台特定命令查询所有运行中的Chrome环境ID（跨平台）
     private async checkAllChromeProcesses(): Promise<string[]> {
         try {
             if (process.platform === 'win32') {
+                // Windows: 使用 PowerShell + WMI
                 return new Promise((resolve) => {
-                    // 一次性获取所有Chrome进程的命令行，然后提取环境ID
                     const command = `powershell "Get-CimInstance -ClassName Win32_Process -Filter \\"Name='chrome.exe'\\" | Select-Object CommandLine | ForEach-Object { $_.CommandLine }"`;
-                    
-                    log.debug(`执行统一进程检查命令: ${command}`);
-                    
-                    exec(command, { 
+
+                    log.debug(`[Windows] 执行进程检查命令`);
+
+                    exec(command, {
                         encoding: 'utf8',
                         timeout: 8000,
                         windowsHide: true
                     }, (error, stdout) => {
                         if (error) {
-                            log.debug(`统一检查Chrome进程失败:`, error.message);
+                            log.debug(`[Windows] 检查Chrome进程失败:`, error.message);
                             resolve([]);
                             return;
                         }
-                        
-                        // 从命令行参数中提取环境ID
-                        const envIds: string[] = [];
-                        const lines = stdout.split('\n');
-                        
-                        for (const line of lines) {
-                            const trimmed = line.trim();
-                            if (trimmed.includes('--user-data-dir=') && trimmed.includes('environments')) {
-                                // 匹配 --user-data-dir=D:\chrome多开\environments\xxxxxxxx 格式
-                                const match = trimmed.match(/--user-data-dir=.*?environments[\\\/]([a-f0-9]{8})/);
-                                if (match && match[1]) {
-                                    envIds.push(match[1]);
-                                }
-                            }
+
+                        const envIds = this.parseEnvironmentIds(stdout);
+                        log.debug(`[Windows] 找到${envIds.length}个运行中的环境: [${envIds.join(', ')}]`);
+                        resolve(envIds);
+                    });
+                });
+            } else if (process.platform === 'darwin') {
+                // macOS: 使用 ps 命令
+                return new Promise((resolve) => {
+                    const command = `ps -ax -o command | grep "Google Chrome" | grep -- --user-data-dir`;
+
+                    log.debug(`[macOS] 执行进程检查命令`);
+
+                    exec(command, {
+                        encoding: 'utf8',
+                        timeout: 8000
+                    }, (error, stdout) => {
+                        if (error) {
+                            // grep 没有匹配时会返回错误码，这是正常的
+                            log.debug(`[macOS] 没有找到运行中的Chrome环境`);
+                            resolve([]);
+                            return;
                         }
-                        
-                        const uniqueEnvIds = [...new Set(envIds)]; // 去重
-                        log.debug(`统一进程检查结果: 找到${uniqueEnvIds.length}个运行中的环境: [${uniqueEnvIds.join(', ')}]`);
-                        resolve(uniqueEnvIds);
+
+                        const envIds = this.parseEnvironmentIds(stdout);
+                        log.debug(`[macOS] 找到${envIds.length}个运行中的环境: [${envIds.join(', ')}]`);
+                        resolve(envIds);
+                    });
+                });
+            } else if (process.platform === 'linux') {
+                // Linux: 使用 ps 命令
+                return new Promise((resolve) => {
+                    const command = `ps aux | grep chrome | grep -- --user-data-dir`;
+
+                    log.debug(`[Linux] 执行进程检查命令`);
+
+                    exec(command, {
+                        encoding: 'utf8',
+                        timeout: 8000
+                    }, (error, stdout) => {
+                        if (error) {
+                            log.debug(`[Linux] 没有找到运行中的Chrome环境`);
+                            resolve([]);
+                            return;
+                        }
+
+                        const envIds = this.parseEnvironmentIds(stdout);
+                        log.debug(`[Linux] 找到${envIds.length}个运行中的环境: [${envIds.join(', ')}]`);
+                        resolve(envIds);
                     });
                 });
             }
+
             return [];
         } catch (error) {
-            log.debug(`统一检查Chrome进程失败:`, error);
+            log.debug(`检查Chrome进程失败:`, error);
             return [];
         }
+    }
+
+    // 从命令行输出中解析环境ID（跨平台通用）
+    private parseEnvironmentIds(output: string): string[] {
+        const envIds: string[] = [];
+        const lines = output.split('\n');
+
+        for (const line of lines) {
+            const trimmed = line.trim();
+            if (trimmed.includes('--user-data-dir=') && trimmed.includes('environments')) {
+                // 匹配 --user-data-dir=.../environments/xxxxxxxx 格式
+                // 支持 Windows 和 Unix 路径分隔符
+                const match = trimmed.match(/--user-data-dir=.*?environments[\\\/]([a-f0-9]{8})/);
+                if (match && match[1]) {
+                    envIds.push(match[1]);
+                }
+            }
+        }
+
+        // 去重并返回
+        return [...new Set(envIds)];
     }
 
 } 

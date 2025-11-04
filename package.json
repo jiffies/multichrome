@@ -7,12 +7,14 @@
     "scripts": {
         "dev": "concurrently \"npm run dev:vite\" \"npm run dev:electron\"",
         "dev:vite": "vite",
-        "dev:electron": "set NODE_ENV=development && tsc -p electron/tsconfig.json && copy electron\\preload.cjs dist\\electron\\preload.cjs && npx electron .",
+        "dev:electron": "cross-env NODE_ENV=development tsc -p electron/tsconfig.json && cpx electron/preload.cjs dist/electron && npx electron .",
         "build": "npm run build:vite && npm run build:electron",
         "build:vite": "vite build",
-        "build:electron": "tsc -p electron/tsconfig.json && copy electron\\preload.cjs dist\\electron\\preload.cjs",
+        "build:electron": "tsc -p electron/tsconfig.json && cpx electron/preload.cjs dist/electron",
         "start": "npx electron .",
         "package:win": "electron-builder --win",
+        "package:mac": "electron-builder --mac",
+        "package:linux": "electron-builder --linux",
         "lint": "eslint . --ext .ts,.tsx",
         "lint:fix": "eslint . --ext .ts,.tsx --fix"
     },
@@ -39,7 +41,8 @@
         "react-icons": "^4.12.0",
         "styled-components": "^5.3.11",
         "tailwindcss": "^4.0.15",
-        "uuid": "^9.0.1"
+        "uuid": "^9.0.1",
+        "ws": "^8.18.3"
     },
     "devDependencies": {
         "@electron/rebuild": "^3.7.1",
@@ -48,11 +51,14 @@
         "@types/react": "^18.2.45",
         "@types/react-dom": "^18.2.18",
         "@types/uuid": "^9.0.7",
+        "@types/ws": "^8.18.1",
         "@typescript-eslint/eslint-plugin": "^6.15.0",
         "@typescript-eslint/parser": "^6.15.0",
         "@vitejs/plugin-react": "^4.2.1",
         "autoprefixer": "^10.4.16",
         "concurrently": "^8.2.2",
+        "cpx": "^1.5.0",
+        "cross-env": "^7.0.3",
         "electron": "^28.0.0",
         "electron-builder": "^24.9.1",
         "electron-rebuild": "^3.2.9",
@@ -79,6 +85,22 @@
             ],
             "icon": "assets/icon.ico",
             "forceCodeSigning": false
+        },
+        "mac": {
+            "target": [
+                "dmg",
+                "zip"
+            ],
+            "category": "public.app-category.utilities",
+            "icon": "assets/icon.icns"
+        },
+        "linux": {
+            "target": [
+                "AppImage",
+                "deb"
+            ],
+            "category": "Utility",
+            "icon": "assets/icon.png"
         },
         "nsis": {
             "oneClick": false,
