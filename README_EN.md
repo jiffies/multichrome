@@ -42,6 +42,12 @@ Download the installer for your system from the [Releases](https://github.com/ji
 - **macOS**: `MultiChrome-x.x.x.dmg` or `MultiChrome-x.x.x-mac.zip`
 - **Linux**: `MultiChrome-x.x.x.AppImage` or `multichrome_x.x.x_amd64.deb`
 
+> **macOS Users Note**: The app is not notarized by Apple. To open it for the first time:
+> 1. Right-click the app icon and select "Open"
+> 2. Click "Open" in the dialog
+>
+> Or run in Terminal: `xattr -cr /Applications/MultiChrome.app`
+
 #### Option 2: Build from Source
 
 ```bash

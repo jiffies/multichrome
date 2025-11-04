@@ -42,6 +42,12 @@
 - **macOS**: `MultiChrome-x.x.x.dmg` 或 `MultiChrome-x.x.x-mac.zip`
 - **Linux**: `MultiChrome-x.x.x.AppImage` 或 `multichrome_x.x.x_amd64.deb`
 
+> **macOS 用户注意**: 由于应用未经过 Apple 公证，首次打开时请使用以下方法:
+> 1. 右键点击应用图标，选择"打开"
+> 2. 在弹出对话框中点击"打开"
+>
+> 或者在终端中运行: `xattr -cr /Applications/MultiChrome.app`
+
 #### 方式二: 从源码构建
 
 ```bash
