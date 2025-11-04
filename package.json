@@ -25,7 +25,10 @@
         "electron",
         "react"
     ],
-    "author": "MultiChrome Contributors",
+    "author": {
+        "name": "MultiChrome Contributors",
+        "email": "noreply@multichrome.app"
+    },
     "repository": {
         "type": "git",
         "url": "https://github.com/jiffies/multichrome.git"
